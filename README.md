@@ -1,8 +1,3 @@
-Tentu, saya mengerti. Anda ingin **satu blok kode utuh** yang berisi seluruh isi file `README.md`, termasuk bagian **Panduan Instalasi & Deploy** yang Anda berikan tadi, digabungkan dengan fitur-fitur dan struktur file yang sudah saya buat sebelumnya.
-
-Berikut adalah kode lengkapnya. Silakan **copy semua** dan paste ke file `README.md` Anda.
-
-```markdown
 # 🎓 Sistem Informasi Logbook PKL (Praktik Kerja Lapangan)
 
 ![Google Apps Script](https://img.shields.io/badge/Built%20with-Google%20Apps%20Script-4285F4?style=for-the-badge&logo=google-drive&logoColor=white)
