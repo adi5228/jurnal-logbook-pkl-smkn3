@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Admin Panel</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    /* --- GLOBAL STYLES --- */
+    body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+    
+    /* Layout Wrapper */
+    .wrapper { display: flex; height: 100%; width: 100%; }
+    
+    /* --- SIDEBAR --- */
+    .sidebar { 
+        width: 260px; background: #212529; color: white; 
+        flex-shrink: 0; display: flex; flex-direction: column; 
+        transition: transform 0.3s ease-in-out;
+        z-index: 1050;
+    }
+    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid #343a40; background: #1a1d20; }
+    .nav-link { 
+        color: rgba(255,255,255,0.75); padding: 12px 20px; 
+        cursor: pointer; border-left: 4px solid transparent; 
+        transition: 0.2s; text-decoration: none; display: block; 
+    }
+    .nav-link:hover, .nav-link.active { background-color: #2c3034; color: white; border-left-color: #0d6efd; }
+    .nav-link i { margin-right: 10px; width: 20px; text-align: center; }
+    
+    /* --- CONTENT AREA --- */
+    .content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+    
+    /* Cards & Components */
+    .card-box { background: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); padding: 20px; margin-bottom: 20px; border: 1px solid #e9ecef; }
+    .stat-card { background: white; padding: 20px; border-radius: 10px; border-left: 5px solid #0d6efd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    
+    /* View Transitions */
+    .view-section { display: none; animation: fadeIn 0.3s; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* --- MOBILE RESPONSIVE --- */
+    @media (max-width: 768px) {
+        .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); }
+        .sidebar.show { transform: translateX(0); }
+        
+        .sidebar-overlay { 
+            display: none; position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1040; 
+        }
+        .sidebar-overlay.show { display: block; }
+        
+        .content { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="sidebar" id="mySidebar">
+    <div class="sidebar-header d-flex justify-content-between align-items-center px-3">
+      <div class="text-start">
+          <h5 class="m-0 fw-bold text-white">ADMIN PANEL</h5>
+          <small class="text-muted" style="font-size: 0.75rem;">Sistem Logbook PKL</small>
+      </div>
+      <button class="btn btn-sm btn-dark d-md-none" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    
+    <nav class="mt-3 flex-grow-1">
+      <a class="nav-link active" onclick="switchView('dashboard', this); toggleSidebarMobile()">
+        <i class="bi bi-grid-1x2-fill"></i> Dashboard
+      </a>
+      <a class="nav-link" onclick="switchView('users', this); toggleSidebarMobile()">
+        <i class="bi bi-people-fill"></i> Data Pengguna
+      </a>
+      <a class="nav-link" onclick="switchView('monitoring', this); toggleSidebarMobile()">
+        <i class="bi bi-table"></i> Logbook Masuk
+      </a>
+    </nav>
+    
+    <div class="p-3 bg-dark">
+      <button onclick="changeMyPass()" class="btn btn-outline-secondary w-100 mb-2 btn-sm text-light">
+        <i class="bi bi-key"></i> Password
+      </button>
+      <button onclick="logout()" class="btn btn-danger w-100 btn-sm">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    
+    <div class="d-flex justify-content-between d-md-none mb-3">
+        <h4 class="fw-bold m-0">Menu Admin</h4>
+        <button class="btn btn-light border shadow-sm" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+    </div>
+
+    <div id="viewDashboard" class="view-section active">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="m-0 fw-bold d-none d-md-block">Dashboard Overview</h3>
+          <select id="dashTahun" class="form-select w-auto shadow-sm fw-bold border-primary text-primary" onchange="loadStats()">
+             <option value="">Loading...</option>
+          </select>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="stat-card border-primary">
+            <h6 class="text-muted">Total Siswa PKL</h6>
+            <h2 class="fw-bold m-0" id="statSiswa">0</h2>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card border-warning" style="border-left-color: #ffc107 !important;">
+            <h6 class="text-muted">Total Guru</h6>
+            <h2 class="fw-bold m-0" id="statGuru">0</h2>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card border-success" style="border-left-color: #198754 !important;">
+            <h6 class="text-muted">Logbook Masuk</h6>
+            <h2 class="fw-bold m-0" id="statLogs">0</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewUsers" class="view-section">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h3 class="m-0 fw-bold d-none d-md-block">Manajemen User</h3>
+        <div class="d-flex gap-2 ms-auto">
+            <input type="text" id="searchUser" class="form-control form-control-sm" placeholder="Cari user..." style="width: 150px;" onkeyup="filterTableUser()">
+            <select id="userTahun" class="form-select form-select-sm w-auto" onchange="loadUsers()"></select>
+            <button onclick="openModalUser()" class="btn btn-primary btn-sm"><i class="bi bi-person-plus-fill"></i> Baru</button>
+        </div>
+      </div>
+      
+      <div class="card-box p-0 overflow-hidden">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 text-nowrap">
+            <thead class="bg-light text-secondary">
+              <tr>
+                <th class="ps-4">Username/NISN</th>
+                <th>Nama Lengkap</th>
+                <th>Role</th>
+                <th>Jurusan</th>
+                <th>Tahun</th>
+                <th class="text-end pe-4">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableUsersBody">
+              <tr><td colspan="6" class="text-center py-5 text-muted">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewMonitoring" class="view-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="m-0 fw-bold d-none d-md-block">Monitoring Logbook</h3>
+          <select id="monTahun" class="form-select w-auto shadow-sm" onchange="loadMonitoring()"></select>
+      </div>
+
+      <div class="card-box p-0 overflow-hidden">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.9rem;">
+            <thead class="table-dark">
+              <tr>
+                <th style="width: 50px;" class="text-center">No</th>
+                <th style="width: 100px;">Tanggal</th>
+                <th style="width: 150px;">NISN Siswa</th>
+                <th style="min-width: 200px;">Uraian Kegiatan</th>
+                <th style="width: 150px;">Pembimbing</th>
+                <th style="width: 100px;" class="text-center">Status</th>
+                <th style="width: 80px;" class="text-center">Bukti</th>
+              </tr>
+            </thead>
+            <tbody id="tableMonitorBody">
+              <tr><td colspan="7" class="text-center py-5 text-muted">Memuat data logbook...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal fade" id="modalUser">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="modalTitle">User Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="isEdit">
+        
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-muted">Username / NISN</label>
+          <input type="text" id="fUser" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-muted">Password</label>
+          <input type="text" id="fPass" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-muted">Nama Lengkap</label>
+          <input type="text" id="fNama" class="form-control">
+        </div>
+        
+        <div class="row">
+            <div class="col-6 mb-3">
+                <label class="form-label small fw-bold text-muted">Role</label>
+                <select id="fRole" class="form-select" onchange="toggleGuruSelect()">
+                    <option value="SISWA">SISWA</option>
+                    <option value="GURU">GURU</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </div>
+            <div class="col-6 mb-3">
+                <label class="form-label small fw-bold text-muted">Tahun</label>
+                <input type="number" id="fTahun" class="form-control">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted">Jurusan</label>
+            <select id="fJurusan" class="form-select">
+                <option value="-">-</option>
+                <option value="TJKT">TJKT</option>
+                <option value="TATA BOGA">TATA BOGA</option>
+                <option value="TATA BUSANA">TATA BUSANA</option>
+                <option value="KECANTIKAN">KECANTIKAN</option>
+                <option value="PERHOTELAN">PERHOTELAN</option>
+            </select>
+        </div>
+
+        <div class="mb-3 p-3 bg-light rounded border" id="divPembimbing">
+            <label class="form-label small fw-bold text-primary">Guru Pembimbing</label>
+            <select id="nip_guru" class="form-select">
+                <option value="">-- Pilih Guru --</option>
+            </select>
+            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">*List diambil dari Data Guru.</small>
+        </div>
+
+        <button onclick="saveUser()" class="btn btn-primary w-100 fw-bold mt-2">SIMPAN DATA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // --- GLOBAL VARIABLES ---
+  const token = localStorage.getItem('sessionToken');
+  let allUsers = []; 
+  let modalUserBS = null;
+
+  // --- UI INTERACTION FUNCTIONS ---
+  
+  function toggleSidebar() {
+      document.getElementById('mySidebar').classList.toggle('show');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+  }
+  
+  function toggleSidebarMobile() { 
+      if(window.innerWidth <= 768) toggleSidebar(); 
+  }
+
+  // --- INITIALIZATION ---
+  window.onload = function() {
+    if(!token) { logout(); return; }
+    modalUserBS = new bootstrap.Modal(document.getElementById('modalUser'));
+    initDropdowns();
+  };
+
+  function initDropdowns() {
+      // Fetch available years from backend
+      google.script.run.withSuccessHandler(res => {
+          if(res.success) {
+              const years = res.years;
+              let opts = '<option value="">Semua Data</option>';
+              years.forEach(y => { opts += `<option value="${y}">${y}</option>`; });
+              
+              // Populate all year filters
+              ['dashTahun', 'userTahun', 'monTahun'].forEach(id => {
+                  const el = document.getElementById(id);
+                  if(el) { el.innerHTML = opts; if(years.length > 0) el.value = years[0]; }
+              });
+              
+              // Load initial data
+              loadStats();
+              loadTeachersForDropdown(); 
+          }
+      }).api('adminGetYears', {token: token});
+  }
+
+  function switchView(viewId, el) {
+    // Hide all sections
+    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+    // Show selected section
+    document.getElementById('view' + viewId.charAt(0).toUpperCase() + viewId.slice(1)).classList.add('active');
+    
+    // Update Sidebar Active State
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    
+    // Load data specific to view
+    if(viewId === 'users') loadUsers();
+    if(viewId === 'monitoring') loadMonitoring();
+  }
+
+  // --- DATA LOADING (DASHBOARD & TABLES) ---
+  
+  function loadStats() {
+    const yr = document.getElementById('dashTahun').value;
+    google.script.run.withSuccessHandler(res => {
+       if(res.success) {
+         document.getElementById('statSiswa').innerText = res.countSiswa;
+         document.getElementById('statGuru').innerText = res.countGuru;
+         document.getElementById('statLogs').innerText = res.totalLog;
+       }
+    }).api('getAdminStats', {token: token, targetYear: yr});
+  }
+
+  function loadUsers() {
+    const yr = document.getElementById('userTahun').value;
+    const tbody = document.getElementById('tableUsersBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><span class="spinner-border text-primary"></span></td></tr>';
+    
+    google.script.run.withSuccessHandler(res => {
+       allUsers = res.list; 
+       renderTableUsers(allUsers);
+    }).api('adminGetAllUsers', {token: token, targetYear: yr});
+  }
+
+  function renderTableUsers(data) {
+    const tbody = document.getElementById('tableUsersBody');
+    if(data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Data kosong</td></tr>'; return; }
+    
+    let html = '';
+    data.forEach(u => {
+       let badge = u.role === 'ADMIN' ? 'bg-danger' : (u.role === 'GURU' ? 'bg-success' : 'bg-primary');
+       // Prevent deleting main admin
+       let btnDel = (u.role === 'ADMIN' && u.username === 'admin') ? '' : `<button class="btn btn-sm btn-light border text-danger ms-1" onclick="deleteUser('${u.username}')"><i class="bi bi-trash"></i></button>`;
+       
+       html += `
+         <tr>
+           <td class="ps-4 fw-bold text-dark">${u.username}</td>
+           <td>${u.nama}</td>
+           <td><span class="badge ${badge}">${u.role}</span></td>
+           <td>${u.jurusan}</td>
+           <td>${u.tahun}</td>
+           <td class="text-end pe-4">
+              <button class="btn btn-sm btn-light border text-primary" onclick='editUser(${JSON.stringify(u)})'><i class="bi bi-pencil-square"></i></button>
+              ${btnDel}
+           </td>
+         </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  function filterTableUser() {
+    const key = document.getElementById('searchUser').value.toLowerCase();
+    const filtered = allUsers.filter(u => u.nama.toLowerCase().includes(key) || u.username.toLowerCase().includes(key));
+    renderTableUsers(filtered);
+  }
+
+  function loadMonitoring() {
+    const yr = document.getElementById('monTahun').value;
+    const tbody = document.getElementById('tableMonitorBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-secondary"></div></td></tr>';
+    
+    google.script.run.withSuccessHandler(res => {
+       if(res.list.length === 0) { 
+           tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Belum ada data logbook.</td></tr>'; return; 
+       }
+       
+       let html = '';
+       res.list.forEach((l, i) => {
+          let sts = l.feedback ? '<span class="badge bg-success">ACC</span>' : '<span class="badge bg-warning text-dark">PENDING</span>';
+          let img = l.foto ? `<a href="${l.foto}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-image"></i></a>` : '-';
+          
+          html += `
+            <tr>
+              <td class="text-center">${i+1}</td>
+              <td class="small">${l.tanggal}<br><span class="text-muted">${l.jam}</span></td>
+              <td><span class="fw-bold text-dark">${l.nisn}</span></td>
+              <td>
+                 <div class="fw-bold text-primary small mb-1">${l.judul}</div>
+                 <div class="text-muted small text-truncate" style="max-width: 250px;">${l.deskripsi}</div>
+              </td>
+              <td class="small text-muted">${l.pembimbing}</td>
+              <td class="text-center">${sts}</td>
+              <td class="text-center">${img}</td>
+            </tr>`;
+       });
+       tbody.innerHTML = html;
+    }).api('adminGetMonitoring', {token: token, targetYear: yr});
+  }
+
+  // --- CRUD (CREATE, READ, UPDATE, DELETE) ---
+  
+  function loadTeachersForDropdown() {
+      google.script.run.withSuccessHandler(res => {
+          if(res.success) {
+              let html = '<option value="">-- Pilih Guru --</option>';
+              res.list.forEach(g => { html += `<option value="${g.nip} - ${g.nama}">${g.nama}</option>`; });
+              document.getElementById('nip_guru').innerHTML = html;
+          }
+      }).api('getTeacherList', {});
+  }
+
+  // Hide Teacher Dropdown if role is not SISWA
+  function toggleGuruSelect() {
+      const role = document.getElementById('fRole').value;
+      document.getElementById('divPembimbing').style.display = (role === 'SISWA') ? 'block' : 'none';
+  }
+
+  function openModalUser() {
+    document.getElementById('modalTitle').innerText = "Tambah User";
+    document.getElementById('isEdit').value = "false";
+    document.getElementById('fUser').value = ""; document.getElementById('fUser').readOnly = false;
+    document.getElementById('fPass').value = ""; document.getElementById('fNama').value = "";
+    document.getElementById('fRole').value = "SISWA"; document.getElementById('fJurusan').value = "TJKT";
+    document.getElementById('fTahun').value = new Date().getFullYear();
+    toggleGuruSelect(); 
+    modalUserBS.show();
+  }
+
+  function editUser(u) {
+    document.getElementById('modalTitle').innerText = "Edit User";
+    document.getElementById('isEdit').value = "true";
+    document.getElementById('fUser').value = u.username; document.getElementById('fUser').readOnly = true;
+    document.getElementById('fPass').value = u.password; document.getElementById('fNama').value = u.nama;
+    document.getElementById('fRole').value = u.role; document.getElementById('fJurusan').value = u.jurusan;
+    document.getElementById('fTahun').value = u.tahun;
+    toggleGuruSelect();
+    modalUserBS.show();
+  }
+
+  function saveUser() {
+    const data = {
+      isEdit: document.getElementById('isEdit').value === "true",
+      username: document.getElementById('fUser').value, password: document.getElementById('fPass').value,
+      nama: document.getElementById('fNama').value, role: document.getElementById('fRole').value,
+      jurusan: document.getElementById('fJurusan').value, tahun: document.getElementById('fTahun').value,
+      nip_guru: document.getElementById('nip_guru').value
+    };
+    
+    if(!data.username || !data.nama || !data.password) return Swal.fire('Error', 'Data wajib diisi!', 'warning');
+    
+    Swal.showLoading();
+    google.script.run.withSuccessHandler(res => {
+       if(res.success) {
+          Swal.fire('Sukses', 'Data berhasil disimpan', 'success');
+          modalUserBS.hide();
+          loadUsers();
+          // If a new teacher is added, refresh the dropdown list
+          if(data.role === 'GURU') loadTeachersForDropdown(); 
+       } else {
+          Swal.fire('Gagal', res.error, 'error');
+       }
+    }).api('adminSaveUser', {token: token, ...data});
+  }
+
+  function deleteUser(u) {
+    Swal.fire({
+        title: 'Hapus?', 
+        text: 'Data user akan dihapus permanen.', 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonText: 'Hapus', 
+        confirmButtonColor: '#d33'
+    }).then(r => {
+       if(r.isConfirmed) {
+          google.script.run.withSuccessHandler(res => {
+             if(res.success) { 
+                 Swal.fire('Terhapus','User dihapus.','success'); 
+                 loadUsers(); 
+                 loadTeachersForDropdown(); 
+             } else { 
+                 Swal.fire('Gagal', res.error, 'error'); 
+             }
+          }).api('adminDeleteUser', {token: token, targetUsername: u});
+       }
+    });
+  }
+
+  // --- ACCOUNT SETTINGS ---
+  
+  function changeMyPass() {
+    Swal.fire({
+      title: 'Ganti Password Admin',
+      html: '<input id="swalPass" class="swal2-input" placeholder="Password Baru">',
+      showCancelButton: true, confirmButtonText: 'Simpan'
+    }).then((result) => {
+      if(result.isConfirmed) {
+         const newP = document.getElementById('swalPass').value;
+         if(!newP) return;
+         google.script.run.withSuccessHandler(res => {
+            if(res.success) Swal.fire('Sukses', 'Password diubah', 'success');
+            else Swal.fire('Gagal', res.error, 'error');
+         }).api('adminChangePass', {token: token, newPass: newP});
+      }
+    });
+  }
+
+  function logout() {
+    Swal.fire({ title: 'Keluar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#dc3545' }).then(r => {
+       if(r.isConfirmed) {
+          localStorage.clear();
+          google.script.run.withSuccessHandler(url => window.top.location.href = url).getAppUrl();
+       }
+    });
+  }
+</script>
+
+</body>
+</html>

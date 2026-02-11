@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Dashboard Guru</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    /* --- GLOBAL STYLES --- */
+    body { background-color: #f0f2f5; height: 100vh; overflow: hidden; display: flex; flex-direction: column; font-family: 'Segoe UI', sans-serif; }
+    
+    .navbar { flex-shrink: 0; z-index: 1060; } 
+    
+    .main-layout { display: flex; flex: 1; overflow: hidden; position: relative; }
+    
+    /* --- SIDEBAR (STUDENT LIST) --- */
+    .sidebar { 
+        width: 300px; background: white; border-right: 1px solid #ddd; 
+        overflow-y: auto; display: flex; flex-direction: column; 
+        transition: transform 0.3s ease-in-out;
+    }
+    
+    .student-item { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
+    .student-item:hover { background: #f8f9fa; }
+    .student-item.active { background: #e8f4fd; border-left: 4px solid #0d6efd; }
+    
+    /* --- CONTENT AREA (LOGBOOKS) --- */
+    .content { flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5; position: relative; }
+    .log-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    
+    /* Custom Select for Navbar */
+    .nav-select {
+        background-color: rgba(255,255,255,0.1); 
+        color: white; 
+        border: 1px solid rgba(255,255,255,0.2);
+        font-weight: bold;
+    }
+    .nav-select:focus { background-color: rgba(255,255,255,0.2); color: white; box-shadow: none; border-color: rgba(255,255,255,0.5); }
+    .nav-select option { color: #333; background: white; } 
+
+    /* --- MOBILE RESPONSIVE --- */
+    @media (max-width: 768px) {
+      .sidebar {
+         position: fixed; top: 0; left: 0; bottom: 0;
+         width: 85%; 
+         max-width: 300px;
+         z-index: 1050;
+         transform: translateX(-100%); 
+         box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+      }
+      .sidebar.show { transform: translateX(0); } 
+      
+      .content { width: 100%; padding: 15px; }
+      
+      .sidebar-overlay {
+         display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+         background: rgba(0,0,0,0.5); z-index: 1040;
+      }
+      .sidebar-overlay.show { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark px-3 shadow sticky-top">
+  <div class="d-flex align-items-center w-100">
+      
+      <button class="btn btn-sm btn-outline-light me-2 d-md-none border-0" onclick="toggleSidebar()">
+         <i class="bi bi-list fs-5"></i>
+      </button>
+      
+      <select id="filterTahun" class="form-select form-select-sm w-auto nav-select me-2" onchange="loadMyStudents()">
+         <option value="">Thn...</option>
+      </select>
+
+      <span class="navbar-brand mb-0 h1 fs-6 d-none d-md-block text-truncate me-auto">
+        <i class="bi bi-person-workspace me-2"></i> 
+        <span id="guruName">Memuat...</span>
+      </span>
+
+      <button onclick="changePassGuru()" class="btn btn-sm btn-outline-light me-2 fw-bold" title="Ganti Password">
+         <i class="bi bi-key-fill"></i>
+      </button>
+
+      <button onclick="logout()" class="btn btn-sm btn-danger fw-bold">Keluar</button>
+  </div>
+</nav>
+
+<div class="main-layout">
+  
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <div class="sidebar" id="mySidebar">
+    <div class="p-3 bg-light border-bottom sticky-top d-flex justify-content-between align-items-center">
+         <h6 class="m-0 fw-bold text-dark"><i class="bi bi-people-fill me-2"></i>DAFTAR SISWA</h6>
+         <button class="btn btn-sm btn-close d-md-none" onclick="toggleSidebar()"></button>
+    </div>
+    
+    <div id="studentList">
+      <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm"></span></div>
+    </div>
+  </div>
+  
+  <div class="content">
+    
+    <div id="emptyState" class="text-center text-muted mt-5">
+      <h4>👋 Selamat Datang</h4>
+      <p>Buka menu daftar siswa untuk mulai memeriksa.</p>
+      <button class="btn btn-primary d-md-none mt-3 shadow-sm" onclick="toggleSidebar()">
+          <i class="bi bi-list"></i> Buka Daftar Siswa
+      </button>
+    </div>
+    
+    <div id="logContainer" style="display: none;">
+      <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+          <button class="btn btn-sm btn-light border me-2 d-md-none shadow-sm" onclick="backToEmpty()"><i class="bi bi-arrow-left"></i></button>
+          <div>
+              <small class="text-muted d-block lh-1">Logbook Siswa:</small>
+              <h5 class="m-0 fw-bold text-primary" id="selectedStudent">...</h5>
+          </div>
+      </div>
+      <div id="logsArea"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // --- GLOBAL VARIABLES ---
+  const token = localStorage.getItem('sessionToken');
+  let currentStudentNisn = null;
+
+  function toggleSidebar() {
+      document.getElementById('mySidebar').classList.toggle('show');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+  }
+
+  // --- 1. INITIALIZATION ---
+  window.onload = function() {
+    if(!token) { logout(); return; }
+
+    google.script.run.withSuccessHandler(res => {
+       if(res.success) {
+         document.getElementById('guruName').innerText = res.user.nama || "Guru Pembimbing";
+         initYearDropdown();
+       } else {
+         logout();
+       }
+    }).api('getDashboardData', {token: token});
+  };
+
+  // --- 2. LOAD YEAR DROPDOWN ---
+  function initYearDropdown() {
+      google.script.run.withSuccessHandler(res => {
+          if(res.success) {
+              const years = res.years;
+              let opts = '<option value="">Semua</option>'; 
+              
+              if (years.length > 0) {
+                  years.forEach(y => { opts += `<option value="${y}">${y}</option>`; });
+              } else {
+                  opts = '<option value="">0 Data</option>';
+              }
+              
+              const sel = document.getElementById('filterTahun');
+              sel.innerHTML = opts;
+              
+              // Default to latest year if available
+              if(years.length > 0) sel.value = years[0]; 
+
+              loadMyStudents();
+          }
+      }).api('teacherGetYears', {token: token});
+  }
+
+  // --- 3. LOAD STUDENT LIST ---
+  function loadMyStudents() {
+    const yr = document.getElementById('filterTahun').value;
+    const div = document.getElementById('studentList');
+    div.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm"></span></div>';
+
+    google.script.run.withSuccessHandler(res => {
+       if(res.list.length === 0) {
+         div.innerHTML = '<div class="p-4 text-danger text-center small">Belum ada siswa bimbingan.</div>';
+         return;
+       }
+       
+       let html = '';
+       res.list.forEach(s => {
+         let thnInfo = s.tahun ? `<span class="badge bg-light text-secondary border ms-1">${s.tahun}</span>` : '';
+         html += `
+           <div class="student-item" onclick="openStudent('${s.nisn}', '${s.nama}', this)">
+             <div class="fw-bold text-dark">${s.nama} ${thnInfo}</div>
+             <div class="small text-muted">${s.nisn} • ${s.jurusan}</div>
+           </div>
+         `;
+       });
+       div.innerHTML = html;
+    }).api('getMyStudents', {token: token, targetYear: yr});
+  }
+
+  // --- 4. VIEW STUDENT LOGBOOK ---
+  function openStudent(nisn, nama, el) {
+    document.querySelectorAll('.student-item').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+    
+    currentStudentNisn = nisn;
+    document.getElementById('selectedStudent').innerText = nama;
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('logContainer').style.display = 'block';
+    
+    if(window.innerWidth <= 768) toggleSidebar(); 
+    
+    document.getElementById('logsArea').innerHTML = '<div class="text-center py-5"><span class="spinner-border text-primary"></span><br>Mengambil data...</div>';
+    
+    loadLogs(nisn);
+  }
+  
+  function backToEmpty() {
+      document.getElementById('logContainer').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+  }
+
+  // --- 5. LOAD LOG ENTRIES ---
+  function loadLogs(nisn) {
+    google.script.run.withSuccessHandler(res => {
+       const area = document.getElementById('logsArea');
+       
+       if(!res.success) {
+          area.innerHTML = `<div class="alert alert-danger text-center small">${res.error}</div>`;
+          return;
+       }
+       
+       if(res.list.length === 0) {
+          area.innerHTML = '<div class="alert alert-info text-center">Siswa ini belum mengisi logbook.</div>';
+          return;
+       }
+       
+       let html = '';
+       res.list.forEach(l => {
+         let imgHtml = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 mb-2" style="max-height: 250px; object-fit: contain; background:#f8f9fa; border:1px solid #ddd;">` : '';
+         
+         let feedbackDisplay = l.feedback ? 
+            `<div class="alert alert-success p-2 mt-3 mb-0 small"><i class="bi bi-check-circle-fill"></i> <b>Catatan Anda:</b><br>${l.feedback}</div>` : 
+            `<button onclick="addFeedback('${l.id}')" class="btn btn-sm btn-outline-primary mt-3 w-100"><i class="bi bi-chat-left-text"></i> Beri Catatan</button>`;
+         
+         html += `
+           <div class="log-card">
+             <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+                <span class="badge bg-secondary" style="font-size:0.9rem;">${l.tanggal}</span>
+                <span class="fw-bold text-muted small"><i class="bi bi-clock"></i> ${l.jam}</span>
+             </div>
+             
+             <h6 class="fw-bold text-primary mb-2">${l.judul}</h6>
+             <div class="bg-light p-3 rounded mb-2 border">
+                <p class="mb-0 text-dark small" style="white-space: pre-line;">${l.deskripsi}</p>
+             </div>
+             
+             ${imgHtml}
+             ${feedbackDisplay}
+           </div>
+         `;
+       });
+       area.innerHTML = html;
+       
+    }).api('getStudentLogbooks', {token: token, targetNisn: nisn});
+  }
+
+  // --- 6. ADD FEEDBACK ---
+  function addFeedback(logId) {
+    Swal.fire({
+      title: 'Catatan Guru',
+      input: 'textarea',
+      inputPlaceholder: 'Tulis tanggapan...',
+      showCancelButton: true,
+      confirmButtonText: 'Simpan',
+      confirmButtonColor: '#0d6efd'
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        Swal.showLoading();
+        google.script.run.withSuccessHandler(res => {
+          if(res.success) {
+            Swal.fire('Berhasil', 'Catatan tersimpan.', 'success');
+            loadLogs(currentStudentNisn);
+          } else {
+            Swal.fire('Gagal', res.error, 'error');
+          }
+        }).api('saveFeedback', {token: token, id: logId, feedback: result.value});
+      }
+    });
+  }
+
+  // --- 7. CHANGE PASSWORD ---
+  function changePassGuru() {
+    Swal.fire({
+      title: 'Ganti Password',
+      html: `
+        <div class="mb-2 text-start">
+           <small class="fw-bold">Password Baru</small>
+           <input type="password" id="newPass" class="form-control text-center" placeholder="Minimal 6 karakter">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Simpan',
+      confirmButtonColor: '#0d6efd',
+      preConfirm: () => {
+        const p = document.getElementById('newPass').value;
+        if (!p || p.length < 6) Swal.showValidationMessage('Password minimal 6 karakter');
+        return p;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+        
+        google.script.run.withSuccessHandler(res => {
+           if(res.success) {
+              Swal.fire('Berhasil', 'Password diperbarui.', 'success');
+           } else {
+              Swal.fire('Gagal', res.error, 'error');
+           }
+        }).api('teacherChangePass', { token: token, newPass: result.value });
+      }
+    });
+  }
+
+  // --- 8. LOGOUT ---
+  function logout() {
+    Swal.fire({
+      title: 'Keluar?',
+      text: "Sesi Anda akan berakhir.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Logout'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.clear();
+        
+        Swal.fire({ 
+            title: 'Keluar...', 
+            text: 'Mengalihkan ke halaman login.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() } 
+        });
+        
+        google.script.run.withSuccessHandler(baseUrl => {
+            const link = document.createElement('a');
+            link.href = baseUrl;
+            link.target = '_top';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }).getAppUrl();
+      }
+    });
+  }
+</script>
+
+</body>
+</html>

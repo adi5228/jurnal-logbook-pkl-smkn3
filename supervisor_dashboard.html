@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Dashboard Pembimbing</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    /* --- GLOBAL STYLES --- */
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 80px; margin: 0; }
+    
+    /* --- SCREENS (LOADING & LOCK) --- */
+    #loadingScreen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #ffffff; 
+        z-index: 20000; /* Top Layer */
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+    }
+
+    #lockScreen {
+        display: none; 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: #f8f9fa;
+        z-index: 15000;
+        text-align: center;
+        padding-top: 25vh;
+        padding-left: 20px; padding-right: 20px;
+    }
+
+    #mainDashboard { display: none; }
+
+    /* --- UI COMPONENTS --- */
+    .header-bar { 
+        background: #212529; color: white; padding: 15px; 
+        border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    }
+    
+    .card-custom { 
+        border: none; border-radius: 12px; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+        margin-bottom: 15px; background: white; 
+        transition: transform 0.2s; 
+    }
+    
+    .avatar-circle { 
+        width: 45px; height: 45px; 
+        background-color: #e9ecef; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; 
+        font-weight: bold; color: #495057; margin-right: 12px; 
+        background-size: cover; background-position: center; 
+        border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+    }
+    
+    .feed-header { display: flex; align-items: center; margin-bottom: 10px; }
+    
+    .student-item { cursor: pointer; }
+    .student-item:active { transform: scale(0.98); background-color: #f8f9fa; }
+    
+    /* --- BOTTOM NAVIGATION --- */
+    .bottom-nav { 
+        position: fixed; bottom: 0; width: 100%; 
+        background: white; border-top: 1px solid #dee2e6; 
+        display: flex; justify-content: space-around; 
+        padding: 10px 0; z-index: 1000; 
+    }
+    .nav-item { text-align: center; color: #adb5bd; cursor: pointer; flex: 1; border: none; background: none; }
+    .nav-item.active { color: #212529; font-weight: bold; }
+    .nav-item i { font-size: 1.4rem; display: block; margin-bottom: 2px; }
+    .nav-item span { font-size: 0.75rem; }
+    
+    /* --- VIEW ANIMATIONS --- */
+    .section-view { display: none; animation: fadeIn 0.3s; }
+    .section-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    /* --- MOBILE RESPONSIVE --- */
+    @media (max-width: 576px) {
+        .container { padding-left: 15px; padding-right: 15px; } 
+        .modal-dialog { margin: 0; max-width: 100%; height: 100%; }
+        .modal-content { height: 100%; border-radius: 0; border: none; }
+        .modal-body { overflow-y: auto; padding-bottom: 80px; } 
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingScreen">
+    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+    <h6 class="text-muted fw-bold">Memuat Aplikasi...</h6>
+</div>
+
+<div id="lockScreen">
+    <div class="mb-4">
+        <i class="bi bi-shield-lock-fill text-secondary" style="font-size: 5rem;"></i>
+    </div>
+    <h3 class="fw-bold text-dark mb-3">Sesi Berakhir</h3>
+    <p class="text-muted mb-4">
+        Anda telah keluar dari aplikasi.<br>
+        Silakan login kembali.
+    </p>
+    
+    <a id="btnLoginBack" href="#" target="_top" class="btn btn-primary btn-lg rounded-pill px-5 shadow fw-bold text-decoration-none">
+        <i class="bi bi-box-arrow-in-right me-2"></i> LOGIN KEMBALI
+    </a>
+</div>
+
+<div id="mainDashboard">
+    <div class="header-bar text-center">
+      <h5 class="fw-bold m-0" id="pageTitle">Jelajah Kegiatan</h5>
+      <small class="opacity-75"><i class="bi bi-building"></i> Mode Pembimbing Lapangan</small>
+    </div>
+
+    <div class="container mt-3" style="max-width: 600px;">
+      
+      <div id="viewFeed" class="section-view active">
+         <div id="feedList">
+            <div class="text-center py-5 text-muted">
+               <div class="spinner-border spinner-border-sm text-secondary mb-2"></div><br>
+               Mengambil data...
+            </div>
+         </div>
+      </div>
+
+      <div id="viewSearch" class="section-view">
+         <div class="card card-custom p-3 mb-3">
+            <label class="small fw-bold mb-2">Cari Siswa Bimbingan</label>
+            <div class="input-group">
+               <input type="text" id="inputSearch" class="form-control" placeholder="Ketik Nama atau NISN..." onkeyup="if(event.key === 'Enter') searchStudent()">
+               <button class="btn btn-dark" onclick="searchStudent()"><i class="bi bi-search"></i></button>
+            </div>
+         </div>
+         <h6 class="text-muted small fw-bold px-2">Hasil Pencarian</h6>
+         <div id="searchResult">
+            <div class="text-center text-muted py-5 small opacity-50">
+               <i class="bi bi-search display-1"></i><br>
+               Hasil pencarian akan muncul di sini.
+            </div>
+         </div>
+      </div>
+    </div>
+
+    <div class="bottom-nav shadow">
+      <button class="nav-item active" onclick="switchTab('feed', this)">
+        <i class="bi bi-collection-play-fill"></i>
+        <span>Jelajah</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('search', this)">
+        <i class="bi bi-person-lines-fill"></i>
+        <span>Cari Siswa</span>
+      </button>
+      <button class="nav-item" onclick="logout()">
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Keluar</span>
+      </button>
+    </div>
+</div>
+
+<div class="modal fade" id="modalLogs" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content bg-light">
+      <div class="modal-header bg-white border-bottom-0 shadow-sm sticky-top">
+        <div>
+           <h5 class="modal-title fw-bold" id="modalStudentName">Nama Siswa</h5>
+           <small class="text-muted" id="modalStudentNisn">NISN</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3" id="modalLogsBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // Access Token for Supervisor Mode
+  const token = 'SUPERVISOR_ACCESS'; 
+
+  // --- 1. INITIALIZATION ---
+  document.addEventListener("DOMContentLoaded", function() {
+      // Get Clean URL from Server for Re-Login Button
+      google.script.run.withSuccessHandler(url => {
+          // Remove query params (e.g., ?page=supervisor) to return to main login
+          const cleanUrl = url.split('?')[0];
+          document.getElementById('btnLoginBack').href = cleanUrl;
+          
+          checkSession(); 
+      }).getAppUrl();
+  });
+
+  // --- 2. SESSION CHECK ---
+  function checkSession() {
+      const session = localStorage.getItem('sessionToken');
+      const loading = document.getElementById('loadingScreen');
+      const lock = document.getElementById('lockScreen');
+      const dash = document.getElementById('mainDashboard');
+
+      // Small delay for smooth transition
+      setTimeout(() => {
+          loading.style.display = 'none';
+
+          if(session !== token) {
+             // INVALID SESSION: Show Lock Screen
+             lock.style.display = 'block';
+             dash.style.display = 'none';
+          } else {
+             // VALID SESSION: Show Dashboard & Load Data
+             lock.style.display = 'none';
+             dash.style.display = 'block';
+             loadFeed(); 
+          }
+      }, 500);
+  }
+
+  // --- 3. LOGOUT FUNCTION ---
+  function logout() {
+    Swal.fire({
+      title: 'Keluar?',
+      text: "Sesi Anda akan berakhir.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Keluar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Clear local token
+        localStorage.clear();
+        
+        // Hide Dashboard, Show Lock Screen
+        document.getElementById('mainDashboard').style.display = 'none';
+        document.getElementById('lockScreen').style.display = 'block';
+        
+        const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        toast.fire({ icon: 'success', title: 'Berhasil Keluar' });
+      }
+    });
+  }
+
+  // --- 4. NAVIGATION TABS ---
+  function switchTab(tab, el) {
+      if(tab === 'logout') return;
+      
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+      
+      if(tab === 'feed') {
+         document.getElementById('viewFeed').classList.add('active');
+         document.getElementById('pageTitle').innerText = "Jelajah Kegiatan";
+      } else {
+         document.getElementById('viewSearch').classList.add('active');
+         document.getElementById('pageTitle').innerText = "Cari Siswa";
+         setTimeout(() => document.getElementById('inputSearch').focus(), 300);
+      }
+  }
+
+  // --- 5. DATA LOADING: FEED ---
+  function loadFeed() {
+      const div = document.getElementById('feedList');
+      google.script.run.withSuccessHandler(res => {
+         if(!res.success || res.list.length === 0) { 
+            div.innerHTML = '<div class="text-center text-muted py-5 small">Belum ada aktivitas siswa terbaru.</div>'; return; 
+         }
+         
+         let html = '';
+         res.list.forEach(l => {
+            let avatarStyle = l.owner_foto ? `background-image: url('${l.owner_foto}'); color: transparent;` : '';
+            let initial = l.owner_nama.charAt(0).toUpperCase();
+            let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
+            
+            html += `
+              <div class="card card-custom p-3">
+                 <div class="feed-header">
+                    <div class="avatar-circle" style="${avatarStyle}">${initial}</div>
+                    <div>
+                       <div class="fw-bold text-dark lh-1" style="font-size: 0.95rem;">${l.owner_nama}</div>
+                       <small class="text-muted" style="font-size: 0.75rem;">${l.owner_jurusan} • ${l.tanggal}</small>
+                    </div>
+                 </div>
+                 <h6 class="fw-bold mb-1" style="font-size:1rem">${l.judul}</h6>
+                 <p class="small text-secondary mb-0" style="white-space: pre-wrap;">${l.deskripsi}</p>
+                 ${img}
+              </div>`;
+         });
+         div.innerHTML = html;
+      }).api('supervisorGetFeed', {token: token});
+  }
+
+  // --- 6. DATA LOADING: SEARCH ---
+  function searchStudent() {
+      const query = document.getElementById('inputSearch').value;
+      if(!query) return Swal.fire('Info', 'Masukkan nama atau NISN', 'info');
+      
+      const div = document.getElementById('searchResult');
+      div.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm"></span> Mencari...</div>';
+      
+      google.script.run.withSuccessHandler(res => {
+         if(res.list.length === 0) {
+            div.innerHTML = '<div class="alert alert-warning text-center small border-0">Siswa tidak ditemukan.<br>Coba kata kunci lain.</div>';
+            return;
+         }
+         
+         let html = '';
+         res.list.forEach(s => {
+            let avatarStyle = s.foto ? `background-image: url('${s.foto}'); color: transparent;` : '';
+            let initial = s.nama.charAt(0).toUpperCase();
+            
+            html += `
+              <div class="card card-custom p-3 mb-2 student-item" onclick="openStudentLogs('${s.nisn}', '${s.nama}')">
+                 <div class="d-flex align-items-center">
+                    <div class="avatar-circle" style="${avatarStyle}">${initial}</div>
+                    <div>
+                       <div class="fw-bold text-dark text-truncate" style="max-width: 180px;">${s.nama}</div>
+                       <div class="small text-muted">${s.nisn} • ${s.jurusan}</div>
+                    </div>
+                    <div class="ms-auto"><i class="bi bi-chevron-right text-muted"></i></div>
+                 </div>
+              </div>`;
+         });
+         div.innerHTML = html;
+      }).api('supervisorSearchStudent', {token: token, query: query});
+  }
+
+  // --- 7. MODAL: STUDENT DETAILS ---
+  const myModal = new bootstrap.Modal(document.getElementById('modalLogs'));
+  
+  function openStudentLogs(nisn, nama) {
+      document.getElementById('modalStudentName').innerText = nama;
+      document.getElementById('modalStudentNisn').innerText = "NISN: " + nisn;
+      const body = document.getElementById('modalLogsBody');
+      body.innerHTML = '<div class="text-center py-5"><span class="spinner-border text-primary"></span><br><small class="text-muted">Mengambil data logbook...</small></div>';
+      myModal.show();
+      
+      google.script.run.withSuccessHandler(res => {
+         if(res.list.length === 0) {
+            body.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-journal-x display-4"></i><br>Siswa ini belum membuat laporan.</div>';
+            return;
+         }
+         
+         let html = '';
+         res.list.forEach(l => {
+            let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
+            let feedback = l.feedback 
+                ? `<div class="bg-success bg-opacity-10 border border-success p-2 mt-2 rounded small text-dark"><i class="bi bi-check-circle-fill text-success"></i> <b>Catatan Guru:</b> ${l.feedback}</div>` 
+                : `<div class="mt-2"><span class="badge bg-secondary opacity-50">Belum diperiksa guru</span></div>`;
+            
+            html += `
+              <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3">
+                   <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="badge bg-primary">${l.tanggal}</span>
+                      <span class="small fw-bold text-muted"><i class="bi bi-clock"></i> ${l.jam}</span>
+                   </div>
+                   <h6 class="fw-bold text-dark mb-1">${l.judul}</h6>
+                   <p class="small text-secondary mb-1" style="white-space: pre-wrap;">${l.deskripsi}</p>
+                   ${img}
+                   ${feedback}
+                </div>
+              </div>`;
+         });
+         body.innerHTML = html;
+      }).api('supervisorGetStudentLogs', {token: token, nisn: nisn});
+  }
+</script>
+
+</body>
+</html>

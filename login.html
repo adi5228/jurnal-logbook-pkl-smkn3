@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Login - Sistem PKL</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+  <style>
+    body { 
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        height: 100vh; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        overflow: hidden; 
+    }
+    
+    /* Card Styling */
+    .login-card { 
+        background: rgba(255, 255, 255, 0.99); 
+        padding: 40px; 
+        border-radius: 20px; 
+        width: 100%; 
+        max-width: 400px; 
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
+        position: relative;
+        overflow: hidden;
+    }
+    .login-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 5px;
+        background: linear-gradient(90deg, #3498db, #2ecc71);
+    }
+
+    /* Logo Styling (Menggunakan Icon Font agar aman di GitHub) */
+    .logo-container {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    .logo-icon {
+        font-size: 4.5rem;
+        color: #1e3c72;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        transition: all 0.3s;
+    }
+    .logo-icon:hover {
+        transform: scale(1.05);
+        color: #2a5298;
+    }
+
+    /* Buttons */
+    .btn-primary { 
+        background: #1e3c72; 
+        border: none; 
+        padding: 10px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-primary:hover { 
+        background: #2a5298; 
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
+    }
+    
+    .btn-supervisor {
+        border: 2px solid #1e3c72;
+        color: #1e3c72;
+        background: transparent;
+        font-weight: 600;
+        padding: 8px;
+        transition: all 0.3s;
+        white-space: nowrap; 
+    }
+    .btn-supervisor:hover {
+        background: #1e3c72;
+        color: white;
+    }
+
+    /* Inputs */
+    .form-control:focus { 
+        box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1); 
+        border-color: #1e3c72; 
+    }
+    .password-toggle { cursor: pointer; }
+
+    /* Divider */
+    .divider {
+        display: flex; align-items: center; text-align: center; margin: 20px 0;
+        color: #aaa; font-size: 0.8rem;
+    }
+    .divider::before, .divider::after {
+        content: ''; flex: 1; border-bottom: 1px solid #ddd;
+    }
+    .divider:not(:empty)::before { margin-right: .5em; }
+    .divider:not(:empty)::after { margin-left: .5em; }
+    
+    .footer-copy { position: fixed; bottom: 10px; width: 100%; text-align: center; color: rgba(255,255,255,0.6); font-size: 0.75rem; }
+
+    /* Animation Utilities */
+    .btn-pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+
+    /* Mobile Responsive Tweaks */
+    @media (max-width: 576px) {
+        body { padding: 15px; } 
+        .login-card { padding: 25px; max-width: 100%; }
+        .logo-icon { font-size: 3.5rem; } 
+        h4 { font-size: 1.25rem; } 
+        .btn-primary, .btn-supervisor { padding: 8px; font-size: 0.9rem; }
+        .form-control { font-size: 0.9rem; } 
+        .btn-supervisor { white-space: normal; font-size: 0.85rem; }
+        .divider { margin: 15px 0; font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card animate__animated animate__zoomIn">
+  
+  <div class="logo-container">
+      <i class="bi bi-mortarboard-fill logo-icon"></i>
+  </div>
+  
+  <div class="text-center mb-4">
+      <h4 class="fw-bold text-dark m-0">SISTEM LOGBOOK PKL</h4>
+      <small class="text-muted">SMKN 3 KENDARI</small>
+  </div>
+  
+  <form onsubmit="handleLogin(event)">
+    <div class="mb-3">
+      <label class="form-label fw-bold small text-secondary">NISN / Username</label>
+      <div class="input-group">
+        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-fill text-primary"></i></span>
+        <input type="text" id="u" class="form-control border-start-0" required placeholder="Masukkan ID Pengguna">
+      </div>
+    </div>
+    
+    <div class="mb-4">
+      <label class="form-label fw-bold small text-secondary">Password</label>
+      <div class="input-group">
+        <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock-fill text-primary"></i></span>
+        <input type="password" id="p" class="form-control border-start-0" required placeholder="********">
+        <span class="input-group-text bg-white password-toggle" onclick="togglePassword('p', 'iconLogin')">
+            <i class="bi bi-eye-slash" id="iconLogin"></i>
+        </span>
+      </div>
+    </div>
+    
+    <div class="d-grid mb-2">
+      <button type="submit" id="btnLogin" class="btn btn-primary rounded-pill">
+        MASUK APLIKASI <i class="bi bi-box-arrow-in-right ms-2"></i>
+      </button>
+    </div>
+  </form>
+
+  <div class="d-grid mt-2">
+      <button id="btnSupervisor" onclick="loginSupervisor()" class="btn btn-supervisor rounded-pill">
+        <i class="bi bi-building me-1"></i> MASUK SEBAGAI PEMBIMBING
+      </button>
+  </div>
+
+  <div class="divider">BELUM PUNYA AKUN?</div>
+
+  <div class="d-grid">
+      <button type="button" onclick="openRegister()" class="btn btn-outline-success fw-bold btn-sm py-2">
+          <i class="bi bi-person-plus-fill me-1"></i> DAFTAR AKUN SENDIRI
+      </button>
+  </div>
+</div>
+
+<div class="footer-copy">
+    &copy; 2026 Informatika UHO
+</div>
+
+<div class="modal fade" id="registerModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-badge me-2"></i>Pendaftaran Siswa PKL</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4 bg-light">
+        <div class="alert alert-info small py-2 mb-3">
+             <i class="bi bi-info-circle-fill me-1"></i> Data NISN tidak bisa diubah setelah daftar.
+        </div>
+
+        <div class="mb-2">
+           <label class="small fw-bold text-dark">NISN</label>
+           <input type="number" id="regNisn" class="form-control" placeholder="Contoh: 0054xxx">
+        </div>
+        
+        <div class="mb-2">
+           <label class="small fw-bold text-dark">Nama Lengkap</label>
+           <input type="text" id="regNama" class="form-control" placeholder="Sesuai Absen">
+        </div>
+        
+        <div class="mb-2">
+           <label class="small fw-bold text-dark">Jurusan</label>
+           <select id="regJurusan" class="form-select">
+              <option value="" disabled selected>- Pilih Jurusan -</option>
+              <option value="TJKT">TJKT (Teknik Jaringan Komputer)</option>
+              <option value="Tata Boga">Tata Boga</option>
+              <option value="Tata Busana">Tata Busana</option>
+              <option value="Tata Kecantikan">Tata Kecantikan</option>
+              <option value="Perhotelan">Perhotelan</option>
+           </select>
+        </div>
+
+        <div class="mb-2">
+           <label class="small fw-bold text-dark">Tahun PKL</label>
+           <input type="number" id="regTahun" class="form-control" placeholder="Contoh: 2026" min="2020">
+        </div>
+        
+        <div class="mb-3">
+           <label class="small fw-bold text-dark">Cari Guru Pembimbing</label>
+           <input class="form-control" list="guruOptions" id="regGuruInput" placeholder="Ketik Nama atau NIP Guru..." autocomplete="off">
+           <datalist id="guruOptions">
+              </datalist>
+           <small class="text-muted" style="font-size: 0.75rem">*Ketik nama guru lalu pilih dari daftar.</small>
+        </div>
+        
+        <div class="mb-3">
+           <label class="small fw-bold text-dark">Buat Password</label>
+           <div class="input-group">
+               <input type="password" id="regPass" class="form-control" placeholder="Minimal 6 karakter">
+               <span class="input-group-text bg-white password-toggle" onclick="togglePassword('regPass', 'iconReg')">
+                  <i class="bi bi-eye-slash" id="iconReg"></i>
+               </span>
+           </div>
+        </div>
+        
+        <button onclick="doRegister()" id="btnReg" class="btn btn-success w-100 fw-bold shadow-sm">
+           DAFTAR SEKARANG <i class="bi bi-check-circle ms-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // --- FUNGSI HELPER ---
+  
+  // Redirect aman untuk menghindari blokir Iframe/Sandbox di Google Apps Script
+  function executeRedirect(targetUrl) {
+      const link = document.createElement('a');
+      link.href = targetUrl;
+      link.target = '_top'; 
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  }
+
+  function togglePassword(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === "password") {
+          input.type = "text";
+          icon.classList.remove("bi-eye-slash");
+          icon.classList.add("bi-eye");
+      } else {
+          input.type = "password";
+          icon.classList.remove("bi-eye");
+          icon.classList.add("bi-eye-slash");
+      }
+  }
+
+  // --- 1. HANDLE LOGIN UTAMA ---
+  function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnLogin');
+    const u = document.getElementById('u').value;
+    const p = document.getElementById('p').value;
+
+    if(!u || !p) return;
+    
+    // UI Loading State
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> MEMERIKSA...';
+    
+    google.script.run.withSuccessHandler(res => {
+      if(res.success) {
+        // Simpan sesi ke localStorage
+        localStorage.setItem('sessionToken', res.token);
+        localStorage.setItem('userRole', res.role);
+        
+        // Minta URL Aplikasi untuk Redirect
+        google.script.run.withSuccessHandler(baseUrl => {
+            let targetPage = 'dashboard';
+            if (res.role === 'ADMIN') targetPage = 'admin';
+            const finalUrl = baseUrl + '?page=' + targetPage;
+
+            // Update Tombol Sukses
+            btn.disabled = false;
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success', 'btn-pulse', 'fw-bold');
+            btn.style.fontSize = '1.1rem';
+            btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> LOGIN BERHASIL! KLIK DISINI';
+            
+            // Override aksi klik untuk redirect manual
+            btn.onclick = function(ev) {
+                ev.preventDefault();
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Masuk...';
+                executeRedirect(finalUrl);
+            };
+            
+            // Trigger otomatis via enter key
+            document.querySelector('form').onsubmit = function(ev) {
+                 ev.preventDefault();
+                 btn.click();
+            };
+        }).getAppUrl();
+
+      } else {
+        // Login Gagal
+        Swal.fire({ title: 'Gagal', text: res.error, icon: 'error', confirmButtonColor: '#d33' });
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }).api('login', {u: u, p: p});
+  }
+
+  // --- 2. LOGIN PEMBIMBING (Tanpa Password, Token Khusus) ---
+  function loginSupervisor() {
+    const btnSup = document.getElementById('btnSupervisor');
+    
+    Swal.fire({
+      title: 'Mode Pembimbing',
+      text: 'Masuk mode pantau?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Lanjutkan',
+      confirmButtonColor: '#1e3c72'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        btnSup.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> MEMUAT...';
+        btnSup.disabled = true;
+
+        localStorage.setItem('sessionToken', 'SUPERVISOR_ACCESS');
+
+        google.script.run.withSuccessHandler(baseUrl => {
+            const finalUrl = baseUrl + '?page=supervisor';
+
+            btnSup.disabled = false;
+            btnSup.classList.remove('btn-supervisor');
+            btnSup.classList.add('btn-success', 'btn-pulse', 'fw-bold', 'text-white');
+            btnSup.style.border = 'none';
+            btnSup.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> SIAP! KLIK UNTUK MASUK';
+            
+            btnSup.onclick = function() {
+                btnSup.innerHTML = 'Mengalihkan...';
+                executeRedirect(finalUrl);
+            };
+        }).getAppUrl();
+      }
+    });
+  }
+
+  // --- 3. REGISTER LOGIC ---
+  function openRegister() {
+    const modal = new bootstrap.Modal(document.getElementById('registerModal'));
+    modal.show();
+    document.getElementById('regTahun').value = new Date().getFullYear();
+    const datalist = document.getElementById('guruOptions');
+    datalist.innerHTML = ''; 
+    
+    // Load Teacher List
+    google.script.run.withSuccessHandler(res => {
+       if(res.list.length > 0) {
+          let opts = '';
+          res.list.forEach(g => { opts += `<option value="${g.nip} - ${g.nama}">`; });
+          datalist.innerHTML = opts;
+       }
+    }).api('getTeacherList');
+  }
+
+  function doRegister() {
+     const guruInput = document.getElementById('regGuruInput').value;
+     if(!guruInput) return Swal.fire('Guru Kosong', 'Silakan ketik dan pilih Guru Pembimbing Anda.', 'warning');
+
+     const data = {
+       nisn: document.getElementById('regNisn').value,
+       nama: document.getElementById('regNama').value,
+       jurusan: document.getElementById('regJurusan').value,
+       tahun: document.getElementById('regTahun').value, 
+       nip_guru: guruInput, 
+       password: document.getElementById('regPass').value
+     };
+     
+     if(!data.nisn || !data.nama || !data.jurusan || !data.password) {
+        return Swal.fire('Data Tidak Lengkap', 'Semua kolom wajib diisi.', 'warning');
+     }
+     
+     const btn = document.getElementById('btnReg');
+     const originalText = btn.innerHTML;
+     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> MENDAFTAR...';
+     btn.disabled = true;
+
+     google.script.run.withSuccessHandler(res => {
+       btn.innerHTML = originalText;
+       btn.disabled = false;
+
+       if(res.success) {
+          bootstrap.Modal.getInstance(document.getElementById('registerModal')).hide();
+          Swal.fire({
+             title: 'Pendaftaran Berhasil!',
+             html: `Silakan Login menggunakan:<br><b>NISN: ${data.nisn}</b>`,
+             icon: 'success',
+             confirmButtonColor: '#1e3c72'
+          }).then(() => {
+             // Reset Form
+             document.getElementById('regNisn').value = '';
+             document.getElementById('regNama').value = '';
+             document.getElementById('regPass').value = '';
+             document.getElementById('regGuruInput').value = '';
+          });
+       } else {
+          Swal.fire('Gagal', res.error, 'error');
+       }
+     }).api('register', data);
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Dashboard Siswa</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    /* --- GLOBAL STYLES (Mobile First) --- */
+    body { 
+        background-color: #f0f2f5; 
+        font-family: 'Segoe UI', sans-serif; 
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
+    
+    /* Header */
+    .header-bar { 
+        background: #0d6efd; 
+        color: white; 
+        padding: 15px; 
+        border-radius: 0 0 20px 20px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+        position: sticky; top: 0; z-index: 100; 
+    }
+    
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    /* Cards */
+    .card-custom { 
+        border: none; 
+        border-radius: 15px; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+        margin-bottom: 15px; 
+        background: white; 
+    }
+    
+    .history-item { 
+        border-left: 4px solid #0d6efd; 
+        padding: 15px; 
+        border-bottom: 1px solid #f0f0f0; 
+    }
+    
+    /* Feed Elements */
+    .feed-header { display: flex; align-items: center; margin-bottom: 10px; }
+    
+    .avatar-circle { 
+        width: 40px; height: 40px; 
+        background-color: #e9ecef; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; 
+        font-weight: bold; color: #495057; margin-right: 10px; 
+        background-size: cover; background-position: center;
+        border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        font-size: 0.9rem;
+    }
+    
+    /* Bottom Navigation */
+    .bottom-nav { 
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        background: white; 
+        border-top: 1px solid #dee2e6; 
+        display: flex; justify-content: space-around; 
+        padding: 8px 0; 
+        z-index: 1000; 
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
+    .nav-item { 
+        text-align: center; color: #adb5bd; cursor: pointer; 
+        flex: 1; border: none; background: none; 
+        padding: 5px;
+    }
+    .nav-item.active { color: #0d6efd; font-weight: bold; }
+    .nav-item i { font-size: 1.4rem; display: block; line-height: 1; margin-bottom: 2px; }
+    .nav-item span { font-size: 0.7rem; display: block; }
+
+    /* View Sections & Animations */
+    .section-view { display: none; animation: fadeIn 0.3s; }
+    .section-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .img-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-top: 10px; display: none; }
+    
+    /* Profile Picture Components */
+    .profile-pic-container { position: relative; width: 100px; height: 100px; margin: 0 auto 15px; }
+    .profile-pic { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #0d6efd; background: #e9ecef; }
+    .profile-pic-edit { 
+        position: absolute; bottom: 0; right: 0; 
+        background: #0d6efd; color: white; 
+        width: 32px; height: 32px; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        border: 2px solid white;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header-bar text-center">
+  <h5 class="fw-bold m-0" id="pageTitle">Logbook Saya</h5>
+  <small id="uNameDisplay" class="opacity-75" style="font-size: 0.8rem;">...</small>
+</div>
+
+<div class="container mt-3" style="max-width: 600px;">
+
+  <div id="viewHome" class="section-view active">
+    
+    <button class="btn btn-primary w-100 mb-3 fw-bold rounded-pill shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#formCollapse">
+      <i class="bi bi-plus-circle me-1"></i> Buat Laporan Baru
+    </button>
+    
+    <div class="collapse mb-4" id="formCollapse">
+      <div class="card card-custom p-3">
+        
+        <div class="mb-2">
+           <label class="small fw-bold">Tanggal</label>
+           <input type="date" id="tgl" class="form-control">
+        </div>
+
+        <div class="row mb-2">
+           <div class="col-6">
+              <label class="small fw-bold">Jam Mulai</label>
+              <input type="time" id="jam_mulai" class="form-control">
+           </div>
+           <div class="col-6">
+              <label class="small fw-bold">Jam Selesai</label>
+              <input type="time" id="jam_selesai" class="form-control">
+           </div>
+        </div>
+
+        <div class="mb-2">
+           <label class="small fw-bold">Judul Kegiatan</label>
+           <input type="text" id="judul" class="form-control" placeholder="Contoh: Crimping Kabel LAN">
+        </div>
+
+        <div class="mb-2">
+           <label class="small fw-bold">Deskripsi Detail</label>
+           <textarea id="deskripsi" class="form-control" rows="3" placeholder="Jelaskan langkah-langkahnya..."></textarea>
+        </div>
+
+        <div class="mb-3">
+           <label class="small fw-bold text-muted"><i class="bi bi-camera"></i> Foto Bukti</label>
+           <input type="file" id="foto" class="form-control" accept="image/*" onchange="previewImage()">
+           <img id="preview" class="img-preview">
+        </div>
+
+        <button onclick="kirimLogbook()" id="btnKirim" class="btn btn-success w-100 fw-bold">KIRIM LAPORAN</button>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+       <h6 class="text-muted fw-bold m-0">Riwayat Saya</h6>
+       <button onclick="exportDoc()" class="btn btn-sm btn-outline-success py-1" style="font-size: 0.8rem;">
+         <i class="bi bi-file-earmark-word"></i> Export Docs
+       </button>
+    </div>
+
+    <div id="myHistoryList">
+       <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm"></span> Memuat...</div>
+    </div>
+  </div>
+
+  <div id="viewExplore" class="section-view">
+     <div class="alert alert-info py-2 small border-0 shadow-sm mb-3">
+        <i class="bi bi-info-circle me-1"></i> Lihat kegiatan teman-temanmu hari ini!
+     </div>
+     <div id="publicFeedList">
+        <div class="text-center py-5 text-muted">Mengambil data feed...</div>
+     </div>
+  </div>
+
+  <div id="viewProfile" class="section-view">
+    <div class="card card-custom p-4 text-center">
+       
+       <div class="profile-pic-container">
+          <img src="" id="pFoto" class="profile-pic" onerror="this.src='https://ui-avatars.com/api/?name=User&background=random'">
+          
+          <label for="editFotoInput" class="profile-pic-edit shadow-sm">
+             <i class="bi bi-camera-fill"></i>
+          </label>
+          <input type="file" id="editFotoInput" accept="image/*" style="display:none" onchange="previewEditFoto()">
+       </div>
+       
+       <h5 class="fw-bold mb-0" id="pNama">...</h5>
+       <p class="text-muted small mb-3" id="pJurusan">...</p>
+       
+       <hr>
+       
+       <h6 class="text-start fw-bold mb-3 text-primary"><i class="bi bi-pencil-square"></i> Edit Biodata</h6>
+       
+       <div class="text-start mb-2">
+          <label class="small fw-bold">Nama Lengkap</label>
+          <input type="text" id="editNama" class="form-control">
+       </div>
+
+       <div class="text-start mb-2">
+          <label class="small fw-bold">Jurusan</label>
+          <select id="editJurusan" class="form-select">
+             <option value="TJKT">TJKT (Teknik Jaringan Komputer)</option>
+             <option value="Tata Boga">Tata Boga</option>
+             <option value="Tata Busana">Tata Busana</option>
+             <option value="Tata Kecantikan">Tata Kecantikan</option>
+             <option value="Perhotelan">Perhotelan</option>
+          </select>
+       </div>
+
+       <div class="text-start mb-2">
+          <label class="small fw-bold">Tahun PKL</label>
+          <input type="number" id="editTahun" class="form-control" placeholder="Contoh: 2026">
+       </div>
+
+       <div class="text-start mb-4">
+          <label class="small fw-bold">Password Baru</label>
+          <input type="text" id="editPass" class="form-control" placeholder="(Kosongkan jika tidak ubah)">
+          <small class="text-muted" style="font-size: 0.7rem;">*Minimal 6 karakter</small>
+       </div>
+
+       <button onclick="saveProfile()" class="btn btn-primary w-100 mb-3 fw-bold">SIMPAN PERUBAHAN</button>
+       <button onclick="logout()" class="btn btn-outline-danger w-100">Keluar Aplikasi</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="switchTab('home', this)">
+    <i class="bi bi-house-door-fill"></i>
+    <span>Beranda</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('explore', this)">
+    <i class="bi bi-globe"></i>
+    <span>Jelajah</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('profile', this)">
+    <i class="bi bi-person-fill"></i>
+    <span>Profil</span>
+  </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  const token = localStorage.getItem('sessionToken');
+  let userData = {}; 
+
+  // --- INIT: LOAD DATA ---
+  window.onload = function() {
+    if(!token) { logout(); return; }
+    
+    // Set default date to today
+    document.getElementById('tgl').valueAsDate = new Date();
+
+    google.script.run.withSuccessHandler(res => {
+       if(res.success) {
+         userData = res.user;
+         updateUIUserInfo();
+         loadHistory(); 
+       } else {
+         logout();
+       }
+    }).api('getDashboardData', {token: token});
+  };
+
+  // Helper: Update UI with current User Data
+  function updateUIUserInfo() {
+      document.getElementById('uNameDisplay').innerText = userData.nama;
+      document.getElementById('pNama').innerText = userData.nama;
+      document.getElementById('pJurusan').innerText = userData.jurusan;
+      
+      document.getElementById('editNama').value = userData.nama;
+      document.getElementById('editJurusan').value = userData.jurusan;
+      document.getElementById('editTahun').value = userData.tahun || ""; 
+
+      // Render Profile Pic (With Cache Busting if exists)
+      let fotoUrl = userData.foto_profil 
+          ? userData.foto_profil 
+          : 'https://ui-avatars.com/api/?name=' + userData.nama + '&background=random';
+          
+      document.getElementById('pFoto').src = fotoUrl;
+  }
+
+  // --- NAVIGATION TAB LOGIC ---
+  function switchTab(tab, el) {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+      
+      if(tab === 'home') {
+         document.getElementById('viewHome').classList.add('active');
+         document.getElementById('pageTitle').innerText = "Logbook Saya";
+         loadHistory(); 
+      } else if(tab === 'explore') {
+         document.getElementById('viewExplore').classList.add('active');
+         document.getElementById('pageTitle').innerText = "Jelajah Teman";
+         loadPublicFeed(); 
+      } else if(tab === 'profile') {
+         document.getElementById('viewProfile').classList.add('active');
+         document.getElementById('pageTitle').innerText = "Profil Saya";
+      }
+      
+      window.scrollTo(0,0);
+  }
+
+  // --- LOGBOOK FUNCTIONS ---
+  function previewImage() {
+    const file = document.getElementById('foto').files[0];
+    const preview = document.getElementById('preview');
+    if(file) {
+      const r = new FileReader();
+      r.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; }
+      r.readAsDataURL(file);
+    } else preview.style.display = 'none';
+  }
+
+  function kirimLogbook() {
+    const data = {
+       token: token,
+       tanggal: document.getElementById('tgl').value,
+       jam_mulai: document.getElementById('jam_mulai').value,
+       jam_selesai: document.getElementById('jam_selesai').value,
+       judul: document.getElementById('judul').value,
+       deskripsi: document.getElementById('deskripsi').value,
+       foto: ""
+    };
+
+    if(!data.tanggal || !data.jam_mulai || !data.jam_selesai || !data.judul || !data.deskripsi) {
+       return Swal.fire('Eits!', 'Lengkapi semua kolom dulu.', 'warning');
+    }
+
+    const btn = document.getElementById('btnKirim');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> MENGIRIM...'; 
+    btn.disabled = true;
+
+    const send = (base64) => {
+       data.foto = base64;
+       google.script.run.withSuccessHandler(res => {
+          btn.innerHTML = "KIRIM LAPORAN"; btn.disabled = false;
+          if(res.success) {
+             Swal.fire('Sukses', 'Laporan tersimpan!', 'success');
+             document.getElementById('judul').value = '';
+             document.getElementById('deskripsi').value = '';
+             document.getElementById('jam_mulai').value = '';
+             document.getElementById('jam_selesai').value = '';
+             document.getElementById('foto').value = '';
+             document.getElementById('preview').style.display = 'none';
+             new bootstrap.Collapse(document.getElementById('formCollapse')).hide();
+             loadHistory();
+          } else {
+             Swal.fire('Gagal', res.error, 'error');
+          }
+       }).api('saveLogbook', data);
+    };
+
+    const file = document.getElementById('foto').files[0];
+    if(file) {
+       const r = new FileReader(); r.onload = e => send(e.target.result); r.readAsDataURL(file);
+    } else send("");
+  }
+
+  function loadHistory() {
+     google.script.run.withSuccessHandler(res => {
+        const div = document.getElementById('myHistoryList');
+        if(res.list.length === 0) { 
+           div.innerHTML = '<div class="alert alert-light text-center small text-muted">Belum ada laporan. Ayo buat!</div>'; 
+           return; 
+        }
+        
+        let html = '';
+        res.list.forEach(l => {
+           let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
+           let fb = l.feedback ? `<div class="bg-warning bg-opacity-10 p-2 rounded mt-2 small text-dark border border-warning"><i class="bi bi-chat-quote-fill"></i> <b>Guru:</b> ${l.feedback}</div>` : '';
+           
+           html += `
+             <div class="card card-custom history-item">
+               <div class="d-flex justify-content-between small text-muted mb-1">
+                  <span class="badge bg-secondary">${l.tanggal}</span>
+                  <span class="fw-bold"><i class="bi bi-clock"></i> ${l.jam_mulai} - ${l.jam_selesai}</span>
+               </div>
+               <h6 class="fw-bold text-primary m-0 mt-2">${l.judul}</h6>
+               <p class="small mb-0 text-dark mt-1" style="white-space: pre-wrap;">${l.deskripsi}</p>
+               ${img} ${fb}
+             </div>`;
+        });
+        div.innerHTML = html;
+     }).api('getHistory', {token: token});
+  }
+  
+  function exportDoc() {
+     Swal.fire({
+       title: 'Export Jurnal?',
+       text: 'Buat dokumen Google Docs dari jurnal ini?',
+       icon: 'question',
+       showCancelButton: true,
+       confirmButtonText: 'Ya, Export',
+       confirmButtonColor: '#198754'
+     }).then((result) => {
+       if (result.isConfirmed) {
+         Swal.fire({ title: 'Memproses...', didOpen: () => { Swal.showLoading() } });
+         google.script.run.withSuccessHandler(res => {
+            if(res.success) {
+               Swal.fire({ title: 'Berhasil!', text: 'Dokumen siap.', icon: 'success', confirmButtonText: 'Buka' }).then(() => {
+                  window.open(res.url, '_blank');
+               });
+            } else Swal.fire('Gagal', res.error, 'error');
+         }).api('exportLogbook', {token: token});
+       }
+     });
+  }
+
+  // --- EXPLORE FUNCTIONS ---
+  function loadPublicFeed() {
+     const div = document.getElementById('publicFeedList');
+     div.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-primary"></span></div>';
+     
+     google.script.run.withSuccessHandler(res => {
+        if(res.list.length === 0) { 
+           div.innerHTML = '<div class="text-center small text-muted">Belum ada postingan teman lain.</div>'; return; 
+        }
+        
+        let html = '';
+        res.list.forEach(l => {
+           let initial = l.owner_nama.charAt(0).toUpperCase();
+           let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
+           
+           let avatarContent = initial;
+           let avatarStyle = '';
+           if(l.owner_foto) {
+             avatarContent = '';
+             avatarStyle = `background-image: url('${l.owner_foto}'); color: transparent;`;
+           }
+
+           html += `
+             <div class="card card-custom p-3">
+                <div class="feed-header">
+                   <div class="avatar-circle" style="${avatarStyle}">${avatarContent}</div>
+                   <div>
+                      <div class="fw-bold text-dark lh-1" style="font-size: 0.95rem;">${l.owner_nama}</div>
+                      <small class="text-muted" style="font-size: 0.75rem;">${l.owner_jurusan} • ${l.tanggal}</small>
+                   </div>
+                </div>
+                <h6 class="fw-bold mb-1" style="font-size:1rem">${l.judul}</h6>
+                <p class="small text-secondary mb-0" style="white-space: pre-wrap;">${l.deskripsi}</p>
+                ${img}
+             </div>
+           `;
+        });
+        div.innerHTML = html;
+     }).api('getPublicFeed', {token: token});
+  }
+
+  // --- PROFILE FUNCTIONS ---
+  function previewEditFoto() {
+     const file = document.getElementById('editFotoInput').files[0];
+     if(file) {
+        const r = new FileReader();
+        r.onload = e => { document.getElementById('pFoto').src = e.target.result; }
+        r.readAsDataURL(file);
+     }
+  }
+
+  function saveProfile() {
+     const newData = {
+       nama: document.getElementById('editNama').value,
+       jurusan: document.getElementById('editJurusan').value,
+       tahun: document.getElementById('editTahun').value, 
+       password: document.getElementById('editPass').value,
+       foto: "" 
+     };
+     
+     if(!newData.nama) return Swal.fire('Gagal', 'Nama wajib diisi', 'warning');
+     
+     Swal.fire({
+       title: 'Simpan Profil?',
+       text: 'Data akan diperbarui.',
+       showCancelButton: true, 
+       confirmButtonText: 'Ya, Simpan'
+     }).then(r => {
+        if(r.isConfirmed) {
+           
+           const processSave = (base64) => {
+              newData.foto = base64;
+              Swal.showLoading();
+              
+              google.script.run.withSuccessHandler(res => {
+                 if(res.success) {
+                    Swal.fire('Berhasil', 'Profil diperbarui!', 'success');
+                    
+                    // Update Local State
+                    userData.nama = newData.nama;
+                    userData.jurusan = newData.jurusan;
+                    userData.tahun = newData.tahun; 
+                    
+                    // Update Photo (Force Cache Refresh)
+                    if(res.newPhotoUrl) {
+                        const newUrl = res.newPhotoUrl + '&t=' + new Date().getTime();
+                        userData.foto_profil = newUrl;
+                        document.getElementById('pFoto').src = newUrl;
+                    }
+                    
+                    updateUIUserInfo();
+                    document.getElementById('editPass').value = ''; 
+                 } else Swal.fire('Gagal', res.error, 'error');
+              }).api('updateProfile', {token: token, ...newData});
+           };
+
+           const file = document.getElementById('editFotoInput').files[0];
+           if(file) {
+              const reader = new FileReader();
+              reader.onload = e => processSave(e.target.result);
+              reader.readAsDataURL(file);
+           } else {
+              processSave(""); 
+           }
+        }
+     });
+  }
+
+  // --- LOGOUT ---
+  function logout() {
+    Swal.fire({
+      title: 'Keluar?',
+      text: "Sesi Anda akan berakhir.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Logout'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.clear();
+        
+        google.script.run.withSuccessHandler(url => {
+            const link = document.createElement('a');
+            link.href = url; // Redirect to Main Login
+            link.target = "_top";
+            document.body.appendChild(link);
+            link.click();
+        }).getAppUrl();
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
