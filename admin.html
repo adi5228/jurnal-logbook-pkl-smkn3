@@ -11,51 +11,113 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
   <style>
-    /* --- GLOBAL STYLES --- */
-    body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+    /* ========================================================================
+       LAYOUT & SIDEBAR STYLES
+       ======================================================================== */
+    body { 
+        background-color: #f4f6f9; 
+        font-family: 'Segoe UI', sans-serif; 
+        height: 100vh; 
+        overflow: hidden; /* Mencegah double scrollbar di desktop */
+    }
     
-    /* Layout Wrapper */
-    .wrapper { display: flex; height: 100%; width: 100%; }
+    .wrapper { 
+        display: flex; 
+        height: 100%; 
+        width: 100%; 
+    }
     
-    /* --- SIDEBAR --- */
     .sidebar { 
-        width: 260px; background: #212529; color: white; 
-        flex-shrink: 0; display: flex; flex-direction: column; 
+        width: 260px; 
+        background: #212529; 
+        color: white; 
+        flex-shrink: 0; 
+        display: flex; 
+        flex-direction: column; 
         transition: transform 0.3s ease-in-out;
-        z-index: 1050;
+        z-index: 1050; /* Di atas overlay konten jika di mobile */
     }
-    .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid #343a40; background: #1a1d20; }
+
+    .sidebar-header { 
+        padding: 20px; 
+        text-align: center; 
+        border-bottom: 1px solid #343a40; 
+        background: #1a1d20; 
+    }
+    
     .nav-link { 
-        color: rgba(255,255,255,0.75); padding: 12px 20px; 
-        cursor: pointer; border-left: 4px solid transparent; 
-        transition: 0.2s; text-decoration: none; display: block; 
+        color: rgba(255,255,255,0.75); 
+        padding: 12px 20px; 
+        cursor: pointer; 
+        border-left: 4px solid transparent; 
+        transition: 0.2s; 
+        text-decoration: none; 
+        display: block; 
     }
-    .nav-link:hover, .nav-link.active { background-color: #2c3034; color: white; border-left-color: #0d6efd; }
+    .nav-link:hover, .nav-link.active { 
+        background-color: #2c3034; 
+        color: white; 
+        border-left-color: #0d6efd; 
+    }
     .nav-link i { margin-right: 10px; width: 20px; text-align: center; }
     
-    /* --- CONTENT AREA --- */
-    .content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+    /* ========================================================================
+       CONTENT & COMPONENTS STYLES
+       ======================================================================== */
+    .content { 
+        flex: 1; 
+        padding: 20px; 
+        overflow-y: auto; 
+        position: relative;
+        display: flex; 
+        flex-direction: column; 
+    }
     
-    /* Cards & Components */
-    .card-box { background: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); padding: 20px; margin-bottom: 20px; border: 1px solid #e9ecef; }
-    .stat-card { background: white; padding: 20px; border-radius: 10px; border-left: 5px solid #0d6efd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .card-box { 
+        background: white; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04); 
+        padding: 20px; 
+        margin-bottom: 20px; 
+        border: 1px solid #e9ecef; 
+    }
     
-    /* View Transitions */
-    .view-section { display: none; animation: fadeIn 0.3s; }
+    /* Stats Cards Dashboard */
+    .stat-card { 
+        background: white; 
+        padding: 20px; 
+        border-radius: 10px; 
+        border-left: 5px solid #0d6efd; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+    }
+    
+    /* Single Page Application View Animations */
+    .view-section { display: none; animation: fadeIn 0.3s; flex-grow: 1; }
     .view-section.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    /* --- MOBILE RESPONSIVE --- */
+    /* ========================================================================
+       FOOTER STYLES
+       ======================================================================== */
+    .admin-footer {
+        margin-top: auto; /* Mendorong footer ke paling bawah container flex */
+        padding-top: 20px;
+        border-top: 1px solid #dee2e6;
+        text-align: center;
+        color: #adb5bd;
+        font-size: 0.75rem;
+        font-weight: 500;
+        width: 100%;
+    }
+
+    /* ========================================================================
+       MOBILE ADAPTIVITY
+       ======================================================================== */
     @media (max-width: 768px) {
         .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); }
         .sidebar.show { transform: translateX(0); }
-        
-        .sidebar-overlay { 
-            display: none; position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1040; 
-        }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1040; }
         .sidebar-overlay.show { display: block; }
-        
         .content { padding: 15px; }
     }
   </style>
@@ -88,12 +150,8 @@
     </nav>
     
     <div class="p-3 bg-dark">
-      <button onclick="changeMyPass()" class="btn btn-outline-secondary w-100 mb-2 btn-sm text-light">
-        <i class="bi bi-key"></i> Password
-      </button>
-      <button onclick="logout()" class="btn btn-danger w-100 btn-sm">
-        <i class="bi bi-box-arrow-right"></i> Logout
-      </button>
+      <button onclick="changeMyPass()" class="btn btn-outline-secondary w-100 mb-2 btn-sm text-light"><i class="bi bi-key"></i> Password</button>
+      <button onclick="logout()" class="btn btn-danger w-100 btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</button>
     </div>
   </div>
 
@@ -193,6 +251,10 @@
       </div>
     </div>
 
+    <div class="admin-footer">
+        &copy; KP Informatika UHO 2026
+    </div>
+
   </div>
 </div>
 
@@ -251,7 +313,7 @@
             <select id="nip_guru" class="form-select">
                 <option value="">-- Pilih Guru --</option>
             </select>
-            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">*List diambil dari Data Guru.</small>
+            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">*Pilih guru dari daftar yang tersedia.</small>
         </div>
 
         <button onclick="saveUser()" class="btn btn-primary w-100 fw-bold mt-2">SIMPAN DATA</button>
@@ -263,67 +325,82 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // --- GLOBAL VARIABLES ---
+  // Validasi Sesi
   const token = localStorage.getItem('sessionToken');
-  let allUsers = []; 
+  let allUsers = []; // Variabel global untuk menyimpan data tabel agar bisa di-search (Cache UI)
   let modalUserBS = null;
 
-  // --- UI INTERACTION FUNCTIONS ---
+  /* ==========================================
+     FUNGSI UI & SPA NAVIGATION
+     ========================================== */
   
+  // Mengatur Sidebar di Mobile
   function toggleSidebar() {
       document.getElementById('mySidebar').classList.toggle('show');
       document.getElementById('sidebarOverlay').classList.toggle('show');
   }
-  
-  function toggleSidebarMobile() { 
-      if(window.innerWidth <= 768) toggleSidebar(); 
-  }
+  function toggleSidebarMobile() { if(window.innerWidth <= 768) toggleSidebar(); }
 
-  // --- INITIALIZATION ---
+  // INIT APP
   window.onload = function() {
     if(!token) { logout(); return; }
     modalUserBS = new bootstrap.Modal(document.getElementById('modalUser'));
-    initDropdowns();
+    initDropdowns(); // Load filter tahun dan data guru
   };
 
+  /**
+   * Mengambil metadata dari server untuk mengisi dropdown filter tahun 
+   * dan daftar guru di modal manajemen user.
+   */
   function initDropdowns() {
-      // Fetch available years from backend
       google.script.run.withSuccessHandler(res => {
           if(res.success) {
               const years = res.years;
               let opts = '<option value="">Semua Data</option>';
               years.forEach(y => { opts += `<option value="${y}">${y}</option>`; });
               
-              // Populate all year filters
+              // Isi secara serentak ketiga dropdown filter tahun
               ['dashTahun', 'userTahun', 'monTahun'].forEach(id => {
                   const el = document.getElementById(id);
-                  if(el) { el.innerHTML = opts; if(years.length > 0) el.value = years[0]; }
+                  if(el) { 
+                      el.innerHTML = opts; 
+                      if(years.length > 0) el.value = years[0]; 
+                  }
               });
               
-              // Load initial data
+              // Tarik data setelah filter siap
               loadStats();
               loadTeachersForDropdown(); 
           }
       }).api('adminGetYears', {token: token});
   }
 
+  /**
+   * Single Page App (SPA) Engine. Mengganti view tanpa reload browser.
+   * @param {string} viewId - ID dari View (dashboard, users, monitoring)
+   * @param {element} el - Elemen navigasi yang di-klik
+   */
   function switchView(viewId, el) {
-    // Hide all sections
+    // Matikan semua section
     document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-    // Show selected section
+    // Hidupkan section yang dituju
     document.getElementById('view' + viewId.charAt(0).toUpperCase() + viewId.slice(1)).classList.add('active');
     
-    // Update Sidebar Active State
+    // Matikan UI link aktif
     document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    // Hidupkan yang di-klik
     el.classList.add('active');
     
-    // Load data specific to view
+    // Load Data Otomatis berdasarkan tab yang diklik
     if(viewId === 'users') loadUsers();
     if(viewId === 'monitoring') loadMonitoring();
   }
 
-  // --- DATA LOADING (DASHBOARD & TABLES) ---
+  /* ==========================================
+     LOGIKA DATA & STATISTIK PADA VIEW
+     ========================================== */
   
+  // Mengambil angka untuk card statistik
   function loadStats() {
     const yr = document.getElementById('dashTahun').value;
     google.script.run.withSuccessHandler(res => {
@@ -335,17 +412,19 @@
     }).api('getAdminStats', {token: token, targetYear: yr});
   }
 
+  // Mengambil Data Tabel User Management
   function loadUsers() {
     const yr = document.getElementById('userTahun').value;
     const tbody = document.getElementById('tableUsersBody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><span class="spinner-border text-primary"></span></td></tr>';
     
     google.script.run.withSuccessHandler(res => {
-       allUsers = res.list; 
+       allUsers = res.list; // Simpan ke global var untuk fitur search
        renderTableUsers(allUsers);
     }).api('adminGetAllUsers', {token: token, targetYear: yr});
   }
 
+  // Render Table Element berdasarkan Array (Mendukung fungsi Search Filter)
   function renderTableUsers(data) {
     const tbody = document.getElementById('tableUsersBody');
     if(data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Data kosong</td></tr>'; return; }
@@ -353,9 +432,13 @@
     let html = '';
     data.forEach(u => {
        let badge = u.role === 'ADMIN' ? 'bg-danger' : (u.role === 'GURU' ? 'bg-success' : 'bg-primary');
-       // Prevent deleting main admin
+       
+       // Mencegah super admin menghapus dirinya sendiri dari UI
        let btnDel = (u.role === 'ADMIN' && u.username === 'admin') ? '' : `<button class="btn btn-sm btn-light border text-danger ms-1" onclick="deleteUser('${u.username}')"><i class="bi bi-trash"></i></button>`;
        
+       // Memasukkan array ke format string JSON untuk dilempar ke fungsi Edit
+       let safeJson = JSON.stringify(u).replace(/'/g, "&#39;");
+
        html += `
          <tr>
            <td class="ps-4 fw-bold text-dark">${u.username}</td>
@@ -364,7 +447,7 @@
            <td>${u.jurusan}</td>
            <td>${u.tahun}</td>
            <td class="text-end pe-4">
-              <button class="btn btn-sm btn-light border text-primary" onclick='editUser(${JSON.stringify(u)})'><i class="bi bi-pencil-square"></i></button>
+              <button class="btn btn-sm btn-light border text-primary" onclick='editUser(${safeJson})'><i class="bi bi-pencil-square"></i></button>
               ${btnDel}
            </td>
          </tr>`;
@@ -372,12 +455,14 @@
     tbody.innerHTML = html;
   }
 
+  // Live Search di Sisi Klien (Tanpa Membebani Server DB Google Sheet)
   function filterTableUser() {
     const key = document.getElementById('searchUser').value.toLowerCase();
     const filtered = allUsers.filter(u => u.nama.toLowerCase().includes(key) || u.username.toLowerCase().includes(key));
     renderTableUsers(filtered);
   }
 
+  // Mengambil dan Merender Tabel Monitoring Logbook
   function loadMonitoring() {
     const yr = document.getElementById('monTahun').value;
     const tbody = document.getElementById('tableMonitorBody');
@@ -391,7 +476,7 @@
        let html = '';
        res.list.forEach((l, i) => {
           let sts = l.feedback ? '<span class="badge bg-success">ACC</span>' : '<span class="badge bg-warning text-dark">PENDING</span>';
-          let img = l.foto ? `<a href="${l.foto}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-image"></i></a>` : '-';
+          let img = l.foto ? `<a href="${l.foto}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-image"></i> Bukti</a>` : '-';
           
           html += `
             <tr>
@@ -411,8 +496,11 @@
     }).api('adminGetMonitoring', {token: token, targetYear: yr});
   }
 
-  // --- CRUD (CREATE, READ, UPDATE, DELETE) ---
+  /* ==========================================
+     LOGIKA MANAJEMEN USER (CRUD)
+     ========================================== */
   
+  // Mengisi opsi elemen select untuk "Guru Pembimbing"
   function loadTeachersForDropdown() {
       google.script.run.withSuccessHandler(res => {
           if(res.success) {
@@ -423,14 +511,15 @@
       }).api('getTeacherList', {});
   }
 
-  // Hide Teacher Dropdown if role is not SISWA
+  // Tampilkan field guru pembimbing hanya jika role yang dipilih di modal adalah SISWA
   function toggleGuruSelect() {
       const role = document.getElementById('fRole').value;
       document.getElementById('divPembimbing').style.display = (role === 'SISWA') ? 'block' : 'none';
   }
 
+  // Buka Modal mode "CREATE"
   function openModalUser() {
-    document.getElementById('modalTitle').innerText = "Tambah User";
+    document.getElementById('modalTitle').innerText = "Tambah User Baru";
     document.getElementById('isEdit').value = "false";
     document.getElementById('fUser').value = ""; document.getElementById('fUser').readOnly = false;
     document.getElementById('fPass').value = ""; document.getElementById('fNama').value = "";
@@ -440,10 +529,11 @@
     modalUserBS.show();
   }
 
+  // Buka Modal mode "UPDATE" (Pre-filled dengan data user bersangkutan)
   function editUser(u) {
-    document.getElementById('modalTitle').innerText = "Edit User";
+    document.getElementById('modalTitle').innerText = "Edit Data User";
     document.getElementById('isEdit').value = "true";
-    document.getElementById('fUser').value = u.username; document.getElementById('fUser').readOnly = true;
+    document.getElementById('fUser').value = u.username; document.getElementById('fUser').readOnly = true; // Username/NISN tidak boleh diubah
     document.getElementById('fPass').value = u.password; document.getElementById('fNama').value = u.nama;
     document.getElementById('fRole').value = u.role; document.getElementById('fJurusan').value = u.jurusan;
     document.getElementById('fTahun').value = u.tahun;
@@ -451,24 +541,32 @@
     modalUserBS.show();
   }
 
+  // Eksekusi Simpan Data ke Server
   function saveUser() {
     const data = {
       isEdit: document.getElementById('isEdit').value === "true",
-      username: document.getElementById('fUser').value, password: document.getElementById('fPass').value,
-      nama: document.getElementById('fNama').value, role: document.getElementById('fRole').value,
-      jurusan: document.getElementById('fJurusan').value, tahun: document.getElementById('fTahun').value,
+      username: document.getElementById('fUser').value, 
+      password: document.getElementById('fPass').value,
+      nama: document.getElementById('fNama').value, 
+      role: document.getElementById('fRole').value,
+      jurusan: document.getElementById('fJurusan').value, 
+      tahun: document.getElementById('fTahun').value,
       nip_guru: document.getElementById('nip_guru').value
     };
     
-    if(!data.username || !data.nama || !data.password) return Swal.fire('Error', 'Data wajib diisi!', 'warning');
+    // Basic Form Validation
+    if(!data.username || !data.nama || !data.password) {
+        return Swal.fire('Error', 'Data wajib (Username, Nama, Pass) tidak boleh kosong!', 'warning');
+    }
     
     Swal.showLoading();
     google.script.run.withSuccessHandler(res => {
        if(res.success) {
           Swal.fire('Sukses', 'Data berhasil disimpan', 'success');
-          modalUserBS.hide();
-          loadUsers();
-          // If a new teacher is added, refresh the dropdown list
+          modalUserBS.hide(); // Tutup popup modal
+          loadUsers(); // Refresh tabel data pengguna
+          
+          // Jika yang ditambahkan/diubah adalah guru, perbarui juga dropdownnya
           if(data.role === 'GURU') loadTeachersForDropdown(); 
        } else {
           Swal.fire('Gagal', res.error, 'error');
@@ -476,40 +574,48 @@
     }).api('adminSaveUser', {token: token, ...data});
   }
 
-  function deleteUser(u) {
+  // Eksekusi Hapus Data
+  function deleteUser(username) {
     Swal.fire({
-        title: 'Hapus?', 
-        text: 'Data user akan dihapus permanen.', 
+        title: 'Hapus User?', 
+        text: 'Data pengguna ini akan dihapus secara permanen.', 
         icon: 'warning', 
         showCancelButton: true, 
-        confirmButtonText: 'Hapus', 
+        confirmButtonText: 'Ya, Hapus', 
         confirmButtonColor: '#d33'
     }).then(r => {
        if(r.isConfirmed) {
+          Swal.showLoading();
           google.script.run.withSuccessHandler(res => {
              if(res.success) { 
-                 Swal.fire('Terhapus','User dihapus.','success'); 
+                 Swal.fire('Terhapus', 'Akun berhasil dihapus.', 'success'); 
                  loadUsers(); 
-                 loadTeachersForDropdown(); 
+                 loadTeachersForDropdown(); // Update list di modal jika guru terhapus
              } else { 
                  Swal.fire('Gagal', res.error, 'error'); 
              }
-          }).api('adminDeleteUser', {token: token, targetUsername: u});
+          }).api('adminDeleteUser', {token: token, targetUsername: username});
        }
     });
   }
 
-  // --- ACCOUNT SETTINGS ---
+  /* ==========================================
+     LOGIKA KEAMANAN & PENGATURAN ADMIN
+     ========================================== */
   
+  // Ganti Password Akun Root (Admin yang sedang login)
   function changeMyPass() {
     Swal.fire({
-      title: 'Ganti Password Admin',
-      html: '<input id="swalPass" class="swal2-input" placeholder="Password Baru">',
-      showCancelButton: true, confirmButtonText: 'Simpan'
+      title: 'Ganti Password Root',
+      html: '<input type="password" id="swalPass" class="form-control text-center" placeholder="Ketik Password Baru">',
+      showCancelButton: true, 
+      confirmButtonText: 'Simpan'
     }).then((result) => {
       if(result.isConfirmed) {
          const newP = document.getElementById('swalPass').value;
          if(!newP) return;
+         
+         Swal.showLoading();
          google.script.run.withSuccessHandler(res => {
             if(res.success) Swal.fire('Sukses', 'Password diubah', 'success');
             else Swal.fire('Gagal', res.error, 'error');
@@ -518,10 +624,20 @@
     });
   }
 
+  // Logout Admin
   function logout() {
-    Swal.fire({ title: 'Keluar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Logout', confirmButtonColor: '#dc3545' }).then(r => {
+    Swal.fire({ 
+        title: 'Keluar dari Panel?', 
+        icon: 'question', 
+        showCancelButton: true, 
+        confirmButtonText: 'Logout', 
+        confirmButtonColor: '#dc3545' 
+    }).then(r => {
        if(r.isConfirmed) {
           localStorage.clear();
+          Swal.fire({ title: 'Logout...', didOpen: () => { Swal.showLoading() } });
+          
+          // Meminta URL bersih dari server untuk redirect
           google.script.run.withSuccessHandler(url => window.top.location.href = url).getAppUrl();
        }
     });
