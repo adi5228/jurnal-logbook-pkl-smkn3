@@ -1,38 +1,45 @@
 /**
- * SUPERVISORSERVICE.GS (Saved as SupervisorService.js)
- * Description:
- * Manages functionality for Field Supervisors (Pembimbing Lapangan):
- * - Viewing a public feed of all student activities
- * - Searching for specific students by Name or NISN
- * - Viewing detailed logbook history for a specific student
- * * Note: Supervisors access this via a special token ('SUPERVISOR_ACCESS')
- * defined in Code.js routing.
+ * ============================================================================
+ * SUPERVISOR SERVICE
+ * Deskripsi: Modul backend yang menangani logika bisnis untuk peran
+ * 'PEMBIMBING LAPANGAN' (Supervisor/Instruktur dari Pihak Industri/DUDI).
+ * Modul ini menggunakan token statis ('SUPERVISOR_ACCESS') sehingga
+ * pembimbing dari luar sekolah bisa memantau siswa secara praktis 
+ * tanpa harus melalui proses registrasi akun yang rumit.
+ * ============================================================================
  */
 
-const SupervisorService = {
+var SupervisorService = {
   
   /**
-   * 1. PUBLIC FEED
-   * Retrieves the latest logbook entries from ALL students.
-   * Useful for supervisors to get a general overview of activities.
-   * * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 1. FEED UMUM (TIMELINE AKTIVITAS GLOBAL)
+   * --------------------------------------------------------------------------
+   * Mengambil data logbook terbaru dari semua siswa untuk ditampilkan 
+   * layaknya timeline media sosial. Berguna agar pembimbing bisa memantau
+   * kegiatan anak-anak magang secara real-time.
+   * * @returns {Object} JSON berisi array of objects dari 30 logbook terbaru.
    */
   getPublicFeed: function() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sLogs = ss.getSheetByName('logbooks');
-    const sUsers = ss.getSheetByName('users');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sLogs = ss.getSheetByName('logbooks');
+    var sUsers = ss.getSheetByName('users');
     
-    // Validation: Ensure sheets exist
+    // Validasi keamanan: Pastikan sheet benar-benar ada di database
     if (!sLogs || !sUsers) return { success: true, list: [] };
     
-    const logs = sLogs.getDataRange().getDisplayValues();
-    const users = sUsers.getDataRange().getDisplayValues();
+    // Ambil seluruh data dari sheet sekaligus untuk meminimalisir panggilan API ke Google
+    var logs = sLogs.getDataRange().getDisplayValues();
+    var users = sUsers.getDataRange().getDisplayValues();
     
-    // A. Build User Dictionary (NISN -> Name, Major, Photo)
-    const userMap = {};
-    for(let i = 1; i < users.length; i++) {
-      // Index: 0=NISN, 3=Name, 4=Major, 6=Photo (Col G)
-      const fotoProfil = (users[i].length > 6) ? users[i][6] : "";
+    // A. TEKNIK OPTIMASI: Buat Kamus Data User (HashMap)
+    // Tujuannya agar kita tidak perlu melakukan perulangan (loop) ke data 'users'
+    // setiap kali membaca baris 'logbooks'. Ini mempercepat proses secara drastis.
+    // Format Kamus: { "NISN_1": {nama, jurusan, foto}, "NISN_2": {...} }
+    var userMap = {};
+    for(var i = 1; i < users.length; i++) {
+      // Index kolom: 0=NISN, 3=Nama, 4=Jurusan, 6=Foto Profil
+      var fotoProfil = (users[i].length > 6) ? users[i][6] : "";
       userMap[users[i][0]] = { 
         nama: users[i][3], 
         jurusan: users[i][4], 
@@ -40,67 +47,73 @@ const SupervisorService = {
       };
     }
     
-    // B. Fetch Latest Logbooks
-    const feed = [];
-    const limit = 30; // Limit to 30 recent posts for performance
-    let count = 0;
+    // B. PROSES AMBIL LOGBOOK TERBARU
+    var feed = [];
+    var limit = 30; // Dibatasi maksimal 30 post agar browser client tidak berat (lagging)
+    var count = 0;
 
-    // Loop backwards (newest data first)
-    for(let i = logs.length - 1; i >= 1; i--) {
-      const logOwnerNisn = String(logs[i][1]).trim();
+    // Loop array dari belakang (index terbesar ke terkecil) agar data terbaru tampil duluan
+    for(var j = logs.length - 1; j >= 1; j--) {
+      var logOwnerNisn = String(logs[j][1]).trim();
       
-      // Get owner data from dictionary
-      const ownerData = userMap[logOwnerNisn] || { nama: 'Siswa', jurusan: '-', foto_profil: '' };
+      // Ambil data pemilik logbook dari kamus yang dibuat di langkah A
+      var ownerData = userMap[logOwnerNisn] || { nama: 'Siswa', jurusan: '-', foto_profil: '' };
       
       feed.push({
         owner_nama: ownerData.nama,
         owner_jurusan: ownerData.jurusan,
         owner_foto: ownerData.foto_profil,
-        tanggal: logs[i][2],
-        judul: logs[i][5],
-        deskripsi: logs[i][6],
-        foto: logs[i][7] // Activity Photo
+        tanggal: logs[j][2],
+        judul: logs[j][5],
+        deskripsi: logs[j][6],
+        foto: logs[j][7] // Tautan foto bukti kegiatan
       });
       
       count++;
-      if(count >= limit) break;
+      if(count >= limit) break; // Hentikan loop jika kuota limit sudah terpenuhi
     }
     
     return { success: true, list: feed };
   },
 
   /**
-   * 2. SEARCH STUDENT
-   * Finds students based on partial matches for Name or NISN.
-   * * @param {string} query - The search keyword
-   * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 2. PENCARIAN SISWA (SEARCH ENGINE SEDERHANA)
+   * --------------------------------------------------------------------------
+   * Mencari profil siswa di database berdasarkan input teks (Nama atau NISN).
+   * Pencarian tidak bersifat case-sensitive (huruf besar/kecil tidak masalah).
+   * * @param {string} query - Kata kunci pencarian yang diketik oleh pembimbing.
+   * @returns {Object} JSON berisi array profil siswa yang cocok (maksimal 10 data).
    */
   searchStudent: function(query) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const data = sheet.getDataRange().getDisplayValues();
-    const results = [];
-    const q = String(query).toLowerCase().trim();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    var data = sheet.getDataRange().getDisplayValues();
+    var results = [];
     
-    // Require at least 2 characters to start search
+    // Normalisasi input: ubah ke huruf kecil dan hilangkan spasi berlebih
+    var q = String(query).toLowerCase().trim();
+    
+    // Mencegah pencarian berlebih: Minimal 2 karakter untuk mulai mencari
     if(q.length < 2) return { success: true, list: [] };
 
-    for(let i = 1; i < data.length; i++) {
-      // Columns: 0=Username/NISN, 2=Role, 3=Name, 4=Major, 6=Photo
-      const role = String(data[i][2]).toUpperCase();
-      const nisn = String(data[i][0]).toLowerCase();
-      const nama = String(data[i][3]).toLowerCase();
+    for(var i = 1; i < data.length; i++) {
+      // Struktur Kolom: 0=NISN, 2=Role, 3=Nama, 4=Jurusan, 6=Foto
+      var role = String(data[i][2]).toUpperCase();
+      var nisn = String(data[i][0]).toLowerCase();
+      var nama = String(data[i][3]).toLowerCase();
       
-      // Only search for active STUDENTS matching the query
+      // Filter: Harus berstatus 'SISWA' dan kata kunci ada di Nama ATAU NISN
       if (role === 'SISWA' && (nama.includes(q) || nisn.includes(q))) {
          results.push({
-           nisn: data[i][0], // Return original case NISN
-           nama: data[i][3], // Return original case Name
+           nisn: data[i][0], // Kembalikan format asli (case sensitive) ke frontend
+           nama: data[i][3], 
            jurusan: data[i][4],
            foto: (data[i].length > 6) ? data[i][6] : ""
          });
       }
       
-      // Limit search results to 10 to keep UI clean
+      // Batasi hasil pencarian maksimal 10 data
+      // Berguna agar tampilan UI di mobile tidak memanjang terlalu ekstrem
       if(results.length >= 10) break; 
     }
     
@@ -108,29 +121,33 @@ const SupervisorService = {
   },
 
   /**
-   * 3. GET SPECIFIC STUDENT LOGS
-   * Retrieves the full logbook history for a specific student NISN.
-   * Used when a supervisor clicks on a student from search results.
-   * * @param {string} nisn - Target student NISN
-   * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 3. LIHAT DETAIL LOGBOOK SISWA TERTENTU
+   * --------------------------------------------------------------------------
+   * Menarik seluruh riwayat kegiatan (logbook) dari satu siswa spesifik
+   * saat pembimbing meng-klik nama siswa dari hasil pencarian.
+   * * @param {string} nisn - Nomor Induk Siswa Nasional target.
+   * @returns {Object} JSON berisi array riwayat kegiatan khusus siswa tersebut.
    */
   getStudentLogs: function(nisn) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('logbooks');
-    const data = sheet.getDataRange().getDisplayValues();
-    const list = [];
-    const target = String(nisn).trim();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('logbooks');
+    var data = sheet.getDataRange().getDisplayValues();
+    var list = [];
+    var target = String(nisn).trim();
     
-    // Loop backwards (newest first)
-    for(let i = data.length - 1; i >= 1; i--) {
-      // Check if NISN column (Index 1) matches target
-      if(String(data[i][1]).trim() == target) {
+    // Loop dari bawah (Terbaru ke terlama)
+    for(var i = data.length - 1; i >= 1; i--) {
+      
+      // Cek kecocokan kolom NISN (Index 1). 
+      // Menggunakan operator '===' dan trim() untuk akurasi mutlak.
+      if(String(data[i][1]).trim() === target) {
         list.push({
           tanggal: data[i][2],
-          jam: data[i][3] + ' - ' + data[i][4], // Combine start-end time
+          jam: data[i][3] + ' - ' + data[i][4], // Format gabungan jam mulai dan selesai
           judul: data[i][5],
           deskripsi: data[i][6],
-          foto: data[i][7],    // Proof Photo
-          feedback: data[i][8] // Teacher Feedback (if any)
+          foto: data[i][7],     // Link gambar bukti
+          feedback: data[i][8]  // Catatan persetujuan dari Guru Pembimbing Sekolah
         });
       }
     }
