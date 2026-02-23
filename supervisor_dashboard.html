@@ -7,21 +7,30 @@
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
   <style>
-    /* --- GLOBAL STYLES --- */
-    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 80px; margin: 0; }
+    /* ========================================================================
+       GLOBAL STYLES
+       ======================================================================== */
+    body { 
+        background-color: #f0f2f5; 
+        font-family: 'Segoe UI', sans-serif; 
+        padding-bottom: 80px; /* Menyisakan ruang untuk bottom nav */
+        margin: 0; 
+    }
     
-    /* --- SCREENS (LOADING & LOCK) --- */
+    /* --- 1. LAYAR LOADING AWAL (Mencegah layar putih saat transisi halaman) --- */
     #loadingScreen {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: #ffffff; 
-        z-index: 20000; /* Top Layer */
+        z-index: 20000; /* Selalu di atas segalanya */
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
     }
 
+    /* --- 2. LAYAR SESI HABIS (Menutup aplikasi jika diakses tanpa login) --- */
     #lockScreen {
         display: none; 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -32,53 +41,92 @@
         padding-left: 20px; padding-right: 20px;
     }
 
+    /* --- 3. KONTEN DASHBOARD UTAMA (Disembunyikan sampai sesi tervalidasi) --- */
     #mainDashboard { display: none; }
 
-    /* --- UI COMPONENTS --- */
+    /* ========================================================================
+       KOMPONEN UI STYLES
+       ======================================================================== */
     .header-bar { 
-        background: #212529; color: white; padding: 15px; 
-        border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+        background: #212529; 
+        color: white; 
+        padding: 15px; 
+        border-radius: 0 0 20px 20px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
     }
     
     .card-custom { 
-        border: none; border-radius: 12px; 
+        border: none; 
+        border-radius: 12px; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-        margin-bottom: 15px; background: white; 
+        margin-bottom: 15px; 
+        background: white; 
         transition: transform 0.2s; 
     }
     
+    /* Lingkaran inisial profil siswa */
     .avatar-circle { 
-        width: 45px; height: 45px; 
-        background-color: #e9ecef; border-radius: 50%; 
-        display: flex; align-items: center; justify-content: center; 
-        font-weight: bold; color: #495057; margin-right: 12px; 
-        background-size: cover; background-position: center; 
-        border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        width: 45px; 
+        height: 45px; 
+        background-color: #e9ecef; 
+        border-radius: 50%; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-weight: bold; 
+        color: #495057; 
+        margin-right: 12px; 
+        background-size: cover; 
+        background-position: center; 
+        border: 2px solid white; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
     }
     
     .feed-header { display: flex; align-items: center; margin-bottom: 10px; }
     
+    /* Interaksi hover/klik pada list pencarian siswa */
     .student-item { cursor: pointer; }
     .student-item:active { transform: scale(0.98); background-color: #f8f9fa; }
     
-    /* --- BOTTOM NAVIGATION --- */
+    /* ========================================================================
+       BOTTOM NAVIGATION & ANIMATION STYLES
+       ======================================================================== */
     .bottom-nav { 
-        position: fixed; bottom: 0; width: 100%; 
-        background: white; border-top: 1px solid #dee2e6; 
-        display: flex; justify-content: space-around; 
-        padding: 10px 0; z-index: 1000; 
+        position: fixed; 
+        bottom: 0; 
+        width: 100%; 
+        background: white; 
+        border-top: 1px solid #dee2e6; 
+        display: flex; 
+        justify-content: space-around; 
+        padding: 10px 0; 
+        z-index: 1000; 
     }
     .nav-item { text-align: center; color: #adb5bd; cursor: pointer; flex: 1; border: none; background: none; }
     .nav-item.active { color: #212529; font-weight: bold; }
     .nav-item i { font-size: 1.4rem; display: block; margin-bottom: 2px; }
     .nav-item span { font-size: 0.75rem; }
     
-    /* --- VIEW ANIMATIONS --- */
+    /* Animasi Single Page Application (SPA) */
     .section-view { display: none; animation: fadeIn 0.3s; }
     .section-view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     
-    /* --- MOBILE RESPONSIVE --- */
+    /* ========================================================================
+       FOOTER STYLES
+       ======================================================================== */
+    .app-footer {
+        text-align: center;
+        padding: 20px 10px;
+        color: #adb5bd;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-top: 30px;
+        width: 100%;
+        border-top: 1px solid #e9ecef;
+    }
+
+    /* Penyesuaian Modal untuk HP */
     @media (max-width: 576px) {
         .container { padding-left: 15px; padding-right: 15px; } 
         .modal-dialog { margin: 0; max-width: 100%; height: 100%; }
@@ -134,6 +182,7 @@
                <button class="btn btn-dark" onclick="searchStudent()"><i class="bi bi-search"></i></button>
             </div>
          </div>
+         
          <h6 class="text-muted small fw-bold px-2">Hasil Pencarian</h6>
          <div id="searchResult">
             <div class="text-center text-muted py-5 small opacity-50">
@@ -142,6 +191,11 @@
             </div>
          </div>
       </div>
+
+      <div class="app-footer">
+          &copy; KP Informatika UHO 2026
+      </div>
+
     </div>
 
     <div class="bottom-nav shadow">
@@ -170,7 +224,8 @@
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body p-3" id="modalLogsBody"></div>
+      <div class="modal-body p-3" id="modalLogsBody">
+        </div>
     </div>
   </div>
 </div>
@@ -178,38 +233,44 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // Access Token for Supervisor Mode
+  // Menggunakan Token Statis karena ini adalah mode Guest
   const token = 'SUPERVISOR_ACCESS'; 
 
-  // --- 1. INITIALIZATION ---
+  /**
+   * --- 1. INISIALISASI & KEAMANAN SESI ---
+   * Dijalankan saat halaman HTML (DOM) sudah siap.
+   */
   document.addEventListener("DOMContentLoaded", function() {
-      // Get Clean URL from Server for Re-Login Button
+      // Mengambil URL Aplikasi dasar dari server (untuk tombol Login Kembali).
+      // Membantu mencegah masalah cache URL di iFrame Google.
       google.script.run.withSuccessHandler(url => {
-          // Remove query params (e.g., ?page=supervisor) to return to main login
+          // Bersihkan URL dari parameter pencarian, misal: ?page=supervisor
           const cleanUrl = url.split('?')[0];
           document.getElementById('btnLoginBack').href = cleanUrl;
           
-          checkSession(); 
+          checkSession(); // Jalankan pengecekan sesi
       }).getAppUrl();
   });
 
-  // --- 2. SESSION CHECK ---
+  /**
+   * Mengecek apakah token di memori browser sesuai dengan token supervisor.
+   */
   function checkSession() {
       const session = localStorage.getItem('sessionToken');
       const loading = document.getElementById('loadingScreen');
       const lock = document.getElementById('lockScreen');
       const dash = document.getElementById('mainDashboard');
 
-      // Small delay for smooth transition
+      // Animasi transisi yang halus
       setTimeout(() => {
           loading.style.display = 'none';
 
           if(session !== token) {
-             // INVALID SESSION: Show Lock Screen
+             // JIKA SESI TIDAK VALID (Belum login via index.html): Kunci Layar
              lock.style.display = 'block';
              dash.style.display = 'none';
           } else {
-             // VALID SESSION: Show Dashboard & Load Data
+             // JIKA SESI AMAN: Tampilkan Dashboard dan Load Data
              lock.style.display = 'none';
              dash.style.display = 'block';
              loadFeed(); 
@@ -217,11 +278,15 @@
       }, 500);
   }
 
-  // --- 3. LOGOUT FUNCTION ---
+  /**
+   * --- 2. FUNGSI LOGOUT / KELUAR ---
+   * Karena ini menggunakan iframe SPA, logout tidak melakukan redirect penuh,
+   * melainkan langsung mengunci layar dengan "Lock Screen".
+   */
   function logout() {
     Swal.fire({
       title: 'Keluar?',
-      text: "Sesi Anda akan berakhir.",
+      text: "Anda akan keluar dari mode pantau ini.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -229,38 +294,49 @@
       confirmButtonText: 'Ya, Keluar'
     }).then((result) => {
       if (result.isConfirmed) {
-        // Clear local token
+        // Hapus token statis dari memori browser
         localStorage.clear();
         
-        // Hide Dashboard, Show Lock Screen
+        // Langsung sembunyikan dashboard & munculkan lock screen
         document.getElementById('mainDashboard').style.display = 'none';
         document.getElementById('lockScreen').style.display = 'block';
         
+        // Tampilkan pesan mini (toast) sukses
         const toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
         toast.fire({ icon: 'success', title: 'Berhasil Keluar' });
       }
     });
   }
 
-  // --- 4. NAVIGATION TABS ---
+  /**
+   * --- 3. NAVIGASI TAB MENU (SPA LOGIC) ---
+   */
   function switchTab(tab, el) {
       if(tab === 'logout') return;
       
+      // Ubah visual tombol navigasi
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
       el.classList.add('active');
+      
+      // Sembunyikan semua konten section
       document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
       
+      // Tampilkan section yang dituju
       if(tab === 'feed') {
          document.getElementById('viewFeed').classList.add('active');
          document.getElementById('pageTitle').innerText = "Jelajah Kegiatan";
       } else {
          document.getElementById('viewSearch').classList.add('active');
          document.getElementById('pageTitle').innerText = "Cari Siswa";
+         // Auto-focus ke kolom pencarian
          setTimeout(() => document.getElementById('inputSearch').focus(), 300);
       }
   }
 
-  // --- 5. DATA LOADING: FEED ---
+  /**
+   * --- 4. MUAT FEED GLOBAL ---
+   * Mengambil data seluruh logbook siswa terbaru secara general.
+   */
   function loadFeed() {
       const div = document.getElementById('feedList');
       google.script.run.withSuccessHandler(res => {
@@ -270,8 +346,11 @@
          
          let html = '';
          res.list.forEach(l => {
+            // Render foto profil, jika tidak ada gunakan huruf inisial
             let avatarStyle = l.owner_foto ? `background-image: url('${l.owner_foto}'); color: transparent;` : '';
             let initial = l.owner_nama.charAt(0).toUpperCase();
+            
+            // Render link gambar bukti logbook jika tersedia
             let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
             
             html += `
@@ -292,10 +371,13 @@
       }).api('supervisorGetFeed', {token: token});
   }
 
-  // --- 6. DATA LOADING: SEARCH ---
+  /**
+   * --- 5. PENCARIAN SISWA KHUSUS ---
+   * Mencari data spesifik siswa (via Nama/NISN) di database server.
+   */
   function searchStudent() {
       const query = document.getElementById('inputSearch').value;
-      if(!query) return Swal.fire('Info', 'Masukkan nama atau NISN', 'info');
+      if(!query) return Swal.fire('Info', 'Ketikkan nama atau NISN terlebih dahulu.', 'info');
       
       const div = document.getElementById('searchResult');
       div.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm"></span> Mencari...</div>';
@@ -310,7 +392,6 @@
          res.list.forEach(s => {
             let avatarStyle = s.foto ? `background-image: url('${s.foto}'); color: transparent;` : '';
             let initial = s.nama.charAt(0).toUpperCase();
-            
             html += `
               <div class="card card-custom p-3 mb-2 student-item" onclick="openStudentLogs('${s.nisn}', '${s.nama}')">
                  <div class="d-flex align-items-center">
@@ -327,14 +408,20 @@
       }).api('supervisorSearchStudent', {token: token, query: query});
   }
 
-  // --- 7. MODAL: STUDENT DETAILS ---
+  /**
+   * --- 6. BUKA DETAIL LOGBOOK SISWA VIA MODAL ---
+   * Memanggil daftar logbook hanya untuk satu siswa spesifik yang di-klik
+   * pada hasil pencarian, lalu menampilkannya dalam jendela popup (Modal).
+   */
   const myModal = new bootstrap.Modal(document.getElementById('modalLogs'));
   
   function openStudentLogs(nisn, nama) {
       document.getElementById('modalStudentName').innerText = nama;
       document.getElementById('modalStudentNisn').innerText = "NISN: " + nisn;
+      
       const body = document.getElementById('modalLogsBody');
       body.innerHTML = '<div class="text-center py-5"><span class="spinner-border text-primary"></span><br><small class="text-muted">Mengambil data logbook...</small></div>';
+      
       myModal.show();
       
       google.script.run.withSuccessHandler(res => {
@@ -346,9 +433,11 @@
          let html = '';
          res.list.forEach(l => {
             let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
+            
+            // Indikator visual jika logbook tersebut sudah diperiksa/di-acc oleh Guru Pembimbing
             let feedback = l.feedback 
-                ? `<div class="bg-success bg-opacity-10 border border-success p-2 mt-2 rounded small text-dark"><i class="bi bi-check-circle-fill text-success"></i> <b>Catatan Guru:</b> ${l.feedback}</div>` 
-                : `<div class="mt-2"><span class="badge bg-secondary opacity-50">Belum diperiksa guru</span></div>`;
+                ? `<div class="bg-success bg-opacity-10 border border-success p-2 mt-2 rounded small text-dark"><i class="bi bi-check-circle-fill text-success"></i> <b>Catatan Guru Sekolah:</b> ${l.feedback}</div>` 
+                : `<div class="mt-2"><span class="badge bg-secondary opacity-50">Belum diperiksa guru sekolah</span></div>`;
             
             html += `
               <div class="card border-0 shadow-sm mb-3">
