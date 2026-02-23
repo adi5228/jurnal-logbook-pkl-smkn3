@@ -6,6 +6,7 @@
   <title>Sistem Logbook PKL</title>
   
   <style>
+    /* --- STYLING KHUSUS UNTUK LAYAR LOADING AWAL --- */
     body { 
       font-family: 'Segoe UI', sans-serif; 
       display: flex; 
@@ -17,6 +18,7 @@
       flex-direction: column;
     }
     
+    /* Animasi Spinner Putar */
     .loader { 
       border: 5px solid #e0e0e0; 
       border-top: 5px solid #0d6efd; 
@@ -34,7 +36,7 @@
       letter-spacing: 0.5px;
     }
 
-    /* Error Display Styling */
+    /* Tampilan Error (Disembunyikan secara default) */
     #error-msg {
       display: none;
       color: #dc3545;
@@ -52,80 +54,90 @@
   
   <script>
     /**
-     * MAIN ENTRY POINT
-     * Determines which page to load based on URL parameters or LocalStorage session.
+     * Saat halaman pertama kali dimuat, jalankan fungsi router ini.
      */
     window.onload = function() {
-      // 1. Get URL Parameters (e.g., ?page=supervisor)
+      // 1. Cek Parameter URL (Contoh: url_aplikasi?page=supervisor)
       const urlParams = new URLSearchParams(window.location.search);
       const pageParam = urlParams.get('page');
 
-      // 2. Get Local Session Data
+      // 2. Cek Data Sesi Lokal (LocalStorage) di browser pengguna
       const token = localStorage.getItem('sessionToken');
       const role = localStorage.getItem('userRole');
 
-      // --- ROUTING LOGIC ---
+      // ==========================================
+      // --- LOGIKA ROUTING HALAMAN ---
+      // ==========================================
 
-      // CASE A: URL Parameter exists (Highest Priority)
-      // Handles redirection from server-side logic
+      // KASUS A: Ada Parameter di URL (Prioritas Tertinggi)
+      // Biasanya ini terjadi ketika user dialihkan (redirect) paksa oleh sistem
       if (pageParam === 'supervisor') {
-          loadPage('supervisor_dashboard');
-          return;
+         loadPage('supervisor_dashboard');
+         return;
       }
       
       if (pageParam === 'admin') {
-          // Security Check: Ensure local token matches admin role
-          if(token && role === 'ADMIN') {
-             loadPage('admin');
-          } else {
-             // If trying to access admin without session, redirect to login
-             loadPage('login');
-          }
-          return;
+         // Verifikasi ekstra: Pastikan yang mengakses URL admin benar-benar memiliki sesi ADMIN
+         if(token && role === 'ADMIN') {
+            loadPage('admin');
+         } else {
+            // Jika coba akses URL admin tapi bukan admin, lempar kembali ke halaman login
+            loadPage('login');
+         }
+         return;
       }
 
-      // CASE B: No URL Parameter, but Valid Session exists (Auto-Login)
+      // KASUS B: Tidak Ada Parameter URL, Tapi Ada Sesi Tersimpan (Auto-Login)
       if (token) {
-          if (token === 'SUPERVISOR_ACCESS') {
-             loadPage('supervisor_dashboard');
-             return;
-          }
-          
-          if (role === 'SISWA') {
-             loadPage('student_dashboard');
-             return;
-          }
-          
-          if (role === 'GURU') {
-             loadPage('teacher_dashboard');
-             return;
-          }
-          
-          if (role === 'ADMIN') {
-             loadPage('admin');
-             return;
-          }
+         // Jika tokennya adalah token khusus pembimbing
+         if (token === 'SUPERVISOR_ACCESS') {
+            loadPage('supervisor_dashboard');
+            return;
+         }
+         
+         // Jika token milik siswa
+         if (role === 'SISWA') {
+            loadPage('student_dashboard');
+            return;
+         }
+         
+         // Jika token milik guru
+         if (role === 'GURU') {
+            loadPage('teacher_dashboard');
+            return;
+         }
+         
+         // Jika token milik admin
+         if (role === 'ADMIN') {
+            loadPage('admin');
+            return;
+         }
       }
 
-      // CASE C: Default Fallback (No Session / Invalid Session)
+      // KASUS C: Default (Belum Login atau Sesi Tidak Valid)
+      // Tampilkan halaman form login
       loadPage('login');
     };
 
     /**
-     * Helper: Request Server to Render HTML Page
-     * Calls Google Apps Script 'include' function.
+     * Meminta server Google Apps Script untuk mengambil konten HTML dari file tertentu.
+     * Menggunakan fungsi 'include' yang ada di Code.gs.
+     * @param {string} pageName - Nama file HTML yang ingin dimuat (tanpa ekstensi .html)
      */
     function loadPage(pageName) {
-      console.log("Loading page: " + pageName);
+      console.log("Memuat halaman: " + pageName);
+      
+      // Panggil server (Code.gs)
       google.script.run
-        .withSuccessHandler(renderPage)
-        .withFailureHandler(showError)
+        .withSuccessHandler(renderPage) // Jika sukses, jalankan renderPage
+        .withFailureHandler(showError)  // Jika gagal (internet putus/server error), jalankan showError
         .include(pageName);
     }
 
     /**
-     * Helper: Replace Current Document Content
-     * Replaces the loading screen with the fetched HTML content.
+     * Mengganti seluruh isi halaman saat ini (Layar Loading) 
+     * dengan HTML asli dari halaman yang diminta (Teknik Single Page Application).
+     * @param {string} html - String konten HTML mentah dari server
      */
     function renderPage(html) {
       document.open();
@@ -134,30 +146,36 @@
     }
 
     /**
-     * Helper: Display Error Message
-     * Shows a reset button if loading fails.
+     * Menampilkan pesan error di layar jika koneksi ke server Apps Script gagal.
+     * Terdapat tombol "Reset & Reload" untuk membersihkan cache/sesi yang mungkin korup.
+     * @param {Error} err - Objek error dari sistem
      */
     function showError(err) {
+      // Sembunyikan animasi loading
       document.querySelector('.loader').style.display = 'none';
       document.querySelector('.loading-text').style.display = 'none';
       
+      // Tampilkan kotak pesan error
       const msg = document.getElementById('error-msg');
       msg.style.display = 'block';
       msg.innerHTML = `
         <h4 style="margin:0 0 10px;">Gagal Memuat Sistem</h4>
         <div style="font-size:0.85rem; color:#555;">${err.message}</div>
+        
         <button onclick="localStorage.clear(); window.top.location.href=window.location.href.split('?')[0];" 
-           style="margin-top:15px; padding:8px 15px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">
-           Reset & Reload
+            style="margin-top:15px; padding:8px 15px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer;">
+            Reset & Reload Aplikasi
         </button>
       `;
     }
   </script>
 </head>
 <body>
+  
   <div class="loader"></div>
   <div class="loading-text">Menyiapkan Aplikasi...</div>
   
   <div id="error-msg"></div>
+
 </body>
 </html>
