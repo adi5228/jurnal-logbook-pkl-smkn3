@@ -11,52 +11,124 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
   <style>
-    /* --- GLOBAL STYLES --- */
-    body { background-color: #f0f2f5; height: 100vh; overflow: hidden; display: flex; flex-direction: column; font-family: 'Segoe UI', sans-serif; }
+    /* ========================================================================
+       GLOBAL & MAIN LAYOUT STYLES
+       ======================================================================== */
+    body { 
+        background-color: #f0f2f5; 
+        height: 100vh; 
+        overflow: hidden; /* Mencegah body scrolling, scroll ditangani oleh elemen anak */
+        display: flex; 
+        flex-direction: column; 
+        font-family: 'Segoe UI', sans-serif; 
+    }
     
     .navbar { flex-shrink: 0; z-index: 1060; } 
     
-    .main-layout { display: flex; flex: 1; overflow: hidden; position: relative; }
+    .main-layout { 
+        display: flex; 
+        flex: 1; 
+        overflow: hidden; 
+        position: relative; 
+    }
     
-    /* --- SIDEBAR (STUDENT LIST) --- */
+    /* ========================================================================
+       SIDEBAR STYLES (Daftar Siswa Bimbingan)
+       ======================================================================== */
     .sidebar { 
-        width: 300px; background: white; border-right: 1px solid #ddd; 
-        overflow-y: auto; display: flex; flex-direction: column; 
+        width: 300px; 
+        background: white; 
+        border-right: 1px solid #ddd; 
+        overflow-y: auto; 
+        display: flex; 
+        flex-direction: column; 
         transition: transform 0.3s ease-in-out;
     }
     
-    .student-item { padding: 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: 0.2s; }
+    .student-item { 
+        padding: 15px; 
+        border-bottom: 1px solid #f0f0f0; 
+        cursor: pointer; 
+        transition: 0.2s; 
+    }
     .student-item:hover { background: #f8f9fa; }
-    .student-item.active { background: #e8f4fd; border-left: 4px solid #0d6efd; }
     
-    /* --- CONTENT AREA (LOGBOOKS) --- */
-    .content { flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5; position: relative; }
-    .log-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    /* Highlight untuk siswa yang sedang dipilih */
+    .student-item.active { 
+        background: #e8f4fd; 
+        border-left: 4px solid #0d6efd; 
+    }
     
-    /* Custom Select for Navbar */
+    /* ========================================================================
+       CONTENT AREA STYLES (Area Menampilkan Logbook)
+       ======================================================================== */
+    .content { 
+        flex: 1; 
+        padding: 20px; 
+        overflow-y: auto; 
+        background: #f0f2f5; 
+        position: relative;
+        /* Flexbox agar footer bisa didorong ke bawah (sticky bottom) */
+        display: flex;
+        flex-direction: column; 
+    }
+    
+    .log-card { 
+        background: white; 
+        border-radius: 8px; 
+        padding: 20px; 
+        margin-bottom: 20px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+    }
+    
+    /* ========================================================================
+       CUSTOM UI ELEMENTS
+       ======================================================================== */
+    /* Select Dropdown khusus di Navbar (Filter Tahun) */
     .nav-select {
         background-color: rgba(255,255,255,0.1); 
         color: white; 
         border: 1px solid rgba(255,255,255,0.2);
         font-weight: bold;
     }
-    .nav-select:focus { background-color: rgba(255,255,255,0.2); color: white; box-shadow: none; border-color: rgba(255,255,255,0.5); }
+    .nav-select:focus { 
+        background-color: rgba(255,255,255,0.2); 
+        color: white; 
+        box-shadow: none; 
+        border-color: rgba(255,255,255,0.5); 
+    }
     .nav-select option { color: #333; background: white; } 
 
-    /* --- MOBILE RESPONSIVE --- */
+    /* Footer Styling Khusus Dashboard Guru */
+    .app-footer {
+        text-align: center;
+        padding: 25px 10px;
+        color: #adb5bd;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-top: auto; /* Kunci agar footer selalu di bawah konten */
+        width: 100%;
+        border-top: 1px solid #e9ecef;
+    }
+
+    /* ========================================================================
+       MOBILE RESPONSIVE TWEAKS (Layar <= 768px)
+       ======================================================================== */
     @media (max-width: 768px) {
+      /* Sidebar berubah menjadi mode 'Drawer/Offcanvas' di Mobile */
       .sidebar {
          position: fixed; top: 0; left: 0; bottom: 0;
          width: 85%; 
          max-width: 300px;
          z-index: 1050;
-         transform: translateX(-100%); 
+         transform: translateX(-100%); /* Disembunyikan ke kiri secara default */
          box-shadow: 2px 0 5px rgba(0,0,0,0.1);
       }
-      .sidebar.show { transform: translateX(0); } 
+      .sidebar.show { transform: translateX(0); /* Munculkan sidebar */ } 
       
       .content { width: 100%; padding: 15px; }
       
+      /* Background redup (overlay) saat sidebar mobile terbuka */
       .sidebar-overlay {
          display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
          background: rgba(0,0,0,0.5); z-index: 1040;
@@ -108,15 +180,15 @@
   
   <div class="content">
     
-    <div id="emptyState" class="text-center text-muted mt-5">
+    <div id="emptyState" class="text-center text-muted mt-5 flex-grow-1">
       <h4>👋 Selamat Datang</h4>
-      <p>Buka menu daftar siswa untuk mulai memeriksa.</p>
+      <p>Buka menu daftar siswa untuk mulai memeriksa jurnal/logbook.</p>
       <button class="btn btn-primary d-md-none mt-3 shadow-sm" onclick="toggleSidebar()">
           <i class="bi bi-list"></i> Buka Daftar Siswa
       </button>
     </div>
     
-    <div id="logContainer" style="display: none;">
+    <div id="logContainer" style="display: none; flex-grow: 1;">
       <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
           <button class="btn btn-sm btn-light border me-2 d-md-none shadow-sm" onclick="backToEmpty()"><i class="bi bi-arrow-left"></i></button>
           <div>
@@ -124,8 +196,14 @@
               <h5 class="m-0 fw-bold text-primary" id="selectedStudent">...</h5>
           </div>
       </div>
+      
       <div id="logsArea"></div>
     </div>
+
+    <div class="app-footer">
+        &copy; KP Informatika UHO 2026
+    </div>
+
   </div>
 
 </div>
@@ -133,30 +211,41 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // --- GLOBAL VARIABLES ---
+  // Mengambil token sesi dari LocalStorage
   const token = localStorage.getItem('sessionToken');
-  let currentStudentNisn = null;
+  let currentStudentNisn = null; // Menyimpan NISN siswa yang sedang dilihat logbooknya
 
+  /**
+   * Menangani toggle (buka/tutup) Sidebar pada layar perangkat mobile.
+   */
   function toggleSidebar() {
       document.getElementById('mySidebar').classList.toggle('show');
       document.getElementById('sidebarOverlay').classList.toggle('show');
   }
 
-  // --- 1. INITIALIZATION ---
+  /**
+   * --- 1. INISIALISASI HALAMAN ---
+   * Dijalankan otomatis saat HTML selesai dimuat.
+   */
   window.onload = function() {
+    // Validasi sesi lokal
     if(!token) { logout(); return; }
 
+    // Meminta nama guru dan opsi tahun dari server backend
     google.script.run.withSuccessHandler(res => {
        if(res.success) {
          document.getElementById('guruName').innerText = res.user.nama || "Guru Pembimbing";
-         initYearDropdown();
+         initYearDropdown(); // Lanjutkan mengisi filter tahun
        } else {
-         logout();
+         logout(); // Jika token invalid/kadaluarsa dari server
        }
     }).api('getDashboardData', {token: token});
   };
 
-  // --- 2. LOAD YEAR DROPDOWN ---
+  /**
+   * --- 2. SETUP DROPDOWN FILTER TAHUN ---
+   * Mengambil data tahun (angkatan) siswa yang tersedia di database.
+   */
   function initYearDropdown() {
       google.script.run.withSuccessHandler(res => {
           if(res.success) {
@@ -172,21 +261,29 @@
               const sel = document.getElementById('filterTahun');
               sel.innerHTML = opts;
               
-              // Default to latest year if available
+              // Set nilai default dropdown ke tahun terbaru
               if(years.length > 0) sel.value = years[0]; 
 
+              // Setelah filter siap, ambil data siswa binaan
               loadMyStudents();
           }
       }).api('teacherGetYears', {token: token});
   }
 
-  // --- 3. LOAD STUDENT LIST ---
+  /**
+   * --- 3. MEMUAT DAFTAR SISWA BINAAN GURU TSB ---
+   * Mengambil data daftar siswa di mana guru ini di-set sebagai pembimbingnya.
+   * Mendukung filterisasi berdasarkan Tahun.
+   */
   function loadMyStudents() {
     const yr = document.getElementById('filterTahun').value;
     const div = document.getElementById('studentList');
+    
+    // Tampilkan animasi loading
     div.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm"></span></div>';
 
     google.script.run.withSuccessHandler(res => {
+       // Penanganan jika guru belum memiliki siswa bimbingan
        if(res.list.length === 0) {
          div.innerHTML = '<div class="p-4 text-danger text-center small">Belum ada siswa bimbingan.</div>';
          return;
@@ -194,6 +291,7 @@
        
        let html = '';
        res.list.forEach(s => {
+         // Tambahkan label tahun kecil di samping nama siswa
          let thnInfo = s.tahun ? `<span class="badge bg-light text-secondary border ms-1">${s.tahun}</span>` : '';
          html += `
            <div class="student-item" onclick="openStudent('${s.nisn}', '${s.nama}', this)">
@@ -206,29 +304,48 @@
     }).api('getMyStudents', {token: token, targetYear: yr});
   }
 
-  // --- 4. VIEW STUDENT LOGBOOK ---
+  /**
+   * --- 4. BUKA LOGBOOK SISWA (EVENT ONCLICK) ---
+   * Mengubah area konten utama untuk menampilkan detail jurnal dari siswa yang dipilih.
+   * @param {string} nisn - Nomor Induk Siswa.
+   * @param {string} nama - Nama Lengkap Siswa.
+   * @param {element} el - Elemen HTML list siswa yang di-klik.
+   */
   function openStudent(nisn, nama, el) {
+    // Styling: Buat elemen yang diklik memiliki background biru muda (active state)
     document.querySelectorAll('.student-item').forEach(e => e.classList.remove('active'));
     el.classList.add('active');
     
     currentStudentNisn = nisn;
+    
+    // Setup UI Konten
     document.getElementById('selectedStudent').innerText = nama;
     document.getElementById('emptyState').style.display = 'none';
-    document.getElementById('logContainer').style.display = 'block';
+    document.getElementById('logContainer').style.display = 'flex';
     
+    // Jika sedang menggunakan mobile device, sembunyikan otomatis sidebar setelah memilih siswa
     if(window.innerWidth <= 768) toggleSidebar(); 
     
+    // Tampilkan loading di area logbook
     document.getElementById('logsArea').innerHTML = '<div class="text-center py-5"><span class="spinner-border text-primary"></span><br>Mengambil data...</div>';
     
+    // Panggil fungsi tarik data logbook
     loadLogs(nisn);
   }
   
+  // Fungsi Khusus Mobile: Mengembalikan tampilan konten ke kondisi kosong (Empty State)
   function backToEmpty() {
       document.getElementById('logContainer').style.display = 'none';
-      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('emptyState').style.display = 'flex';
+      // Hapus highlight state pada sidebar
+      document.querySelectorAll('.student-item').forEach(e => e.classList.remove('active'));
   }
 
-  // --- 5. LOAD LOG ENTRIES ---
+  /**
+   * --- 5. MEMUAT DATA LOGBOOK SPESIFIK SISWA ---
+   * Mengambil dan merender JSON Logbook dari server ke dalam susunan Card UI.
+   * @param {string} nisn - NISN target siswa.
+   */
   function loadLogs(nisn) {
     google.script.run.withSuccessHandler(res => {
        const area = document.getElementById('logsArea');
@@ -238,6 +355,7 @@
           return;
        }
        
+       // Handle state jika siswa sama sekali belum pernah membuat entri logbook
        if(res.list.length === 0) {
           area.innerHTML = '<div class="alert alert-info text-center">Siswa ini belum mengisi logbook.</div>';
           return;
@@ -245,8 +363,12 @@
        
        let html = '';
        res.list.forEach(l => {
+         // Render Foto Bukti Jika Ada
          let imgHtml = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 mb-2" style="max-height: 250px; object-fit: contain; background:#f8f9fa; border:1px solid #ddd;">` : '';
          
+         // Logika Feedback (Catatan Guru):
+         // Jika sudah pernah diberi catatan -> Munculkan catatan.
+         // Jika belum (kosong) -> Munculkan Tombol 'Beri Catatan' (ACC).
          let feedbackDisplay = l.feedback ? 
             `<div class="alert alert-success p-2 mt-3 mb-0 small"><i class="bi bi-check-circle-fill"></i> <b>Catatan Anda:</b><br>${l.feedback}</div>` : 
             `<button onclick="addFeedback('${l.id}')" class="btn btn-sm btn-outline-primary mt-3 w-100"><i class="bi bi-chat-left-text"></i> Beri Catatan</button>`;
@@ -273,21 +395,27 @@
     }).api('getStudentLogbooks', {token: token, targetNisn: nisn});
   }
 
-  // --- 6. ADD FEEDBACK ---
+  /**
+   * --- 6. PROSES MEMBERIKAN FEEDBACK GURU ---
+   * Membuka popup input (SweetAlert) bagi guru untuk menulis catatan ACC.
+   * @param {string} logId - ID Logbook (UUID).
+   */
   function addFeedback(logId) {
     Swal.fire({
       title: 'Catatan Guru',
       input: 'textarea',
-      inputPlaceholder: 'Tulis tanggapan...',
+      inputPlaceholder: 'Tulis tanggapan atau persetujuan Anda...',
       showCancelButton: true,
       confirmButtonText: 'Simpan',
       confirmButtonColor: '#0d6efd'
     }).then((result) => {
+      // Pastikan user menekan konfirmasi dan teks tidak kosong
       if (result.isConfirmed && result.value) {
         Swal.showLoading();
         google.script.run.withSuccessHandler(res => {
           if(res.success) {
             Swal.fire('Berhasil', 'Catatan tersimpan.', 'success');
+            // Muat ulang daftar logbook untuk siswa yang sedang aktif dilihat
             loadLogs(currentStudentNisn);
           } else {
             Swal.fire('Gagal', res.error, 'error');
@@ -297,7 +425,10 @@
     });
   }
 
-  // --- 7. CHANGE PASSWORD ---
+  /**
+   * --- 7. GANTI PASSWORD AKUN GURU ---
+   * Fungsi privasi untuk guru mengubah password mereka sendiri.
+   */
   function changePassGuru() {
     Swal.fire({
       title: 'Ganti Password',
@@ -321,7 +452,7 @@
         
         google.script.run.withSuccessHandler(res => {
            if(res.success) {
-              Swal.fire('Berhasil', 'Password diperbarui.', 'success');
+              Swal.fire('Berhasil', 'Password Anda telah diperbarui.', 'success');
            } else {
               Swal.fire('Gagal', res.error, 'error');
            }
@@ -330,7 +461,11 @@
     });
   }
 
-  // --- 8. LOGOUT ---
+  /**
+   * --- 8. FUNGSI LOGOUT (KEAMANAN SESI) ---
+   * Menghapus variabel LocalStorage di browser dan meredirect secara aman
+   * ke halaman awal login menggunakan URL bersih yang di-fetch dari server.
+   */
   function logout() {
     Swal.fire({
       title: 'Keluar?',
@@ -342,6 +477,7 @@
       confirmButtonText: 'Ya, Logout'
     }).then((result) => {
       if (result.isConfirmed) {
+        // Hapus token akses dari memori browser
         localStorage.clear();
         
         Swal.fire({ 
@@ -351,10 +487,11 @@
             didOpen: () => { Swal.showLoading() } 
         });
         
+        // Panggil server untuk mendapatkan Base URL App dan redirect paksa
         google.script.run.withSuccessHandler(baseUrl => {
             const link = document.createElement('a');
             link.href = baseUrl;
-            link.target = '_top';
+            link.target = '_top'; // Memaksa buka di frame parent teratas (keluar iframe GAS)
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
