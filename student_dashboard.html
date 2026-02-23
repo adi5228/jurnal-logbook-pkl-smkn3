@@ -7,17 +7,20 @@
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+  
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
   <style>
-    /* --- GLOBAL STYLES (Mobile First) --- */
+    /* ========================================================================
+       GLOBAL & LAYOUT STYLES
+       ======================================================================== */
     body { 
         background-color: #f0f2f5; 
         font-family: 'Segoe UI', sans-serif; 
-        padding-bottom: 80px; /* Space for bottom nav */
+        padding-bottom: 80px; /* Menyisakan ruang di bawah agar konten tidak tertutup Bottom Nav */
     }
     
-    /* Header */
+    /* Header (Top Bar) */
     .header-bar { 
         background: #0d6efd; 
         color: white; 
@@ -32,7 +35,7 @@
         padding-right: 15px;
     }
 
-    /* Cards */
+    /* Kustomisasi Card Bootstrap */
     .card-custom { 
         border: none; 
         border-radius: 15px; 
@@ -41,13 +44,16 @@
         background: white; 
     }
     
+    /* Indikator visual untuk setiap item riwayat logbook */
     .history-item { 
         border-left: 4px solid #0d6efd; 
         padding: 15px; 
         border-bottom: 1px solid #f0f0f0; 
     }
     
-    /* Feed Elements */
+    /* ========================================================================
+       FEED / JELAJAH STYLES
+       ======================================================================== */
     .feed-header { display: flex; align-items: center; margin-bottom: 10px; }
     
     .avatar-circle { 
@@ -60,7 +66,9 @@
         font-size: 0.9rem;
     }
     
-    /* Bottom Navigation */
+    /* ========================================================================
+       BOTTOM NAVIGATION (Ala Mobile App)
+       ======================================================================== */
     .bottom-nav { 
         position: fixed; bottom: 0; left: 0; right: 0; 
         background: white; 
@@ -79,14 +87,18 @@
     .nav-item i { font-size: 1.4rem; display: block; line-height: 1; margin-bottom: 2px; }
     .nav-item span { font-size: 0.7rem; display: block; }
 
-    /* View Sections & Animations */
+    /* ========================================================================
+       ANIMASI & UTILITIES
+       ======================================================================== */
     .section-view { display: none; animation: fadeIn 0.3s; }
     .section-view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
     .img-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-top: 10px; display: none; }
     
-    /* Profile Picture Components */
+    /* ========================================================================
+       PROFIL STYLES
+       ======================================================================== */
     .profile-pic-container { position: relative; width: 100px; height: 100px; margin: 0 auto 15px; }
     .profile-pic { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #0d6efd; background: #e9ecef; }
     .profile-pic-edit { 
@@ -95,6 +107,19 @@
         width: 32px; height: 32px; border-radius: 50%; 
         display: flex; align-items: center; justify-content: center; cursor: pointer;
         border: 2px solid white;
+    }
+
+    /* ========================================================================
+       FOOTER STYLES
+       ======================================================================== */
+    .app-footer {
+        text-align: center;
+        padding: 20px 10px;
+        color: #adb5bd;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-top: 20px;
+        margin-bottom: 10px;
     }
   </style>
 </head>
@@ -109,13 +134,15 @@
 
   <div id="viewHome" class="section-view active">
     
-    <button class="btn btn-primary w-100 mb-3 fw-bold rounded-pill shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#formCollapse">
+    <button class="btn btn-primary w-100 mb-3 fw-bold rounded-pill shadow-sm" type="button" onclick="resetForm()" data-bs-toggle="collapse" data-bs-target="#formCollapse">
       <i class="bi bi-plus-circle me-1"></i> Buat Laporan Baru
     </button>
     
     <div class="collapse mb-4" id="formCollapse">
       <div class="card card-custom p-3">
         
+        <input type="hidden" id="editLogId">
+
         <div class="mb-2">
            <label class="small fw-bold">Tanggal</label>
            <input type="date" id="tgl" class="form-control">
@@ -143,12 +170,15 @@
         </div>
 
         <div class="mb-3">
-           <label class="small fw-bold text-muted"><i class="bi bi-camera"></i> Foto Bukti</label>
+           <label class="small fw-bold text-muted"><i class="bi bi-camera"></i> Foto Bukti (Opsional saat edit)</label>
            <input type="file" id="foto" class="form-control" accept="image/*" onchange="previewImage()">
            <img id="preview" class="img-preview">
         </div>
 
-        <button onclick="kirimLogbook()" id="btnKirim" class="btn btn-success w-100 fw-bold">KIRIM LAPORAN</button>
+        <div class="d-flex gap-2">
+            <button onclick="kirimLogbook()" id="btnKirim" class="btn btn-success flex-grow-1 fw-bold">KIRIM LAPORAN</button>
+            <button type="button" onclick="cancelEdit()" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#formCollapse">Batal</button>
+        </div>
       </div>
     </div>
 
@@ -168,6 +198,7 @@
      <div class="alert alert-info py-2 small border-0 shadow-sm mb-3">
         <i class="bi bi-info-circle me-1"></i> Lihat kegiatan teman-temanmu hari ini!
      </div>
+     
      <div id="publicFeedList">
         <div class="text-center py-5 text-muted">Mengambil data feed...</div>
      </div>
@@ -186,7 +217,7 @@
        </div>
        
        <h5 class="fw-bold mb-0" id="pNama">...</h5>
-       <p class="text-muted small mb-3" id="pJurusan">...</p>
+       <p class="text-muted small mb-3" id="pJurusan">... </p>
        
        <hr>
        
@@ -224,6 +255,10 @@
     </div>
   </div>
 
+  <div class="app-footer">
+      &copy; KP Informatika UHO 2026
+  </div>
+
 </div>
 
 <div class="bottom-nav">
@@ -244,38 +279,49 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+  // Mengambil token sesi dari memori browser
   const token = localStorage.getItem('sessionToken');
   let userData = {}; 
 
-  // --- INIT: LOAD DATA ---
+  /**
+   * INIT APP: Berjalan pertama kali saat HTML selesai di-load.
+   */
   window.onload = function() {
+    // Validasi Sesi Lokal
     if(!token) { logout(); return; }
     
-    // Set default date to today
+    // Set default tanggal form ke hari ini
     document.getElementById('tgl').valueAsDate = new Date();
 
+    // Minta data profil (Dashboard Data) dari backend
     google.script.run.withSuccessHandler(res => {
        if(res.success) {
          userData = res.user;
          updateUIUserInfo();
-         loadHistory(); 
+         loadHistory(); // Tarik riwayat logbook
        } else {
-         logout();
+         logout(); // Sesi tidak valid / Kadaluarsa
        }
     }).api('getDashboardData', {token: token});
   };
 
-  // Helper: Update UI with current User Data
+  /**
+   * Memperbarui elemen teks/UI sesuai dengan data user yang login.
+   */
   function updateUIUserInfo() {
+      // Teks Header
       document.getElementById('uNameDisplay').innerText = userData.nama;
+      
+      // Teks Profil Tab
       document.getElementById('pNama').innerText = userData.nama;
       document.getElementById('pJurusan').innerText = userData.jurusan;
       
+      // Isi Value Form Edit
       document.getElementById('editNama').value = userData.nama;
       document.getElementById('editJurusan').value = userData.jurusan;
       document.getElementById('editTahun').value = userData.tahun || ""; 
 
-      // Render Profile Pic (With Cache Busting if exists)
+      // Render Foto (Gunakan UI Avatars jika foto kosong)
       let fotoUrl = userData.foto_profil 
           ? userData.foto_profil 
           : 'https://ui-avatars.com/api/?name=' + userData.nama + '&background=random';
@@ -283,11 +329,16 @@
       document.getElementById('pFoto').src = fotoUrl;
   }
 
-  // --- NAVIGATION TAB LOGIC ---
+  /**
+   * PENGATUR TAB NAVIGATION (Single Page Application Logic)
+   */
   function switchTab(tab, el) {
+      // Matikan semua elemen aktif
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      el.classList.add('active');
       document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+      
+      // Nyalakan elemen yang ditekan
+      el.classList.add('active');
       
       if(tab === 'home') {
          document.getElementById('viewHome').classList.add('active');
@@ -301,11 +352,15 @@
          document.getElementById('viewProfile').classList.add('active');
          document.getElementById('pageTitle').innerText = "Profil Saya";
       }
-      
+      // Scroll ke atas setiap kali ganti tab
       window.scrollTo(0,0);
   }
 
-  // --- LOGBOOK FUNCTIONS ---
+  /* ==========================================
+     LOGIKA LOGBOOK (CRUD)
+     ========================================== */
+  
+  // Pratinjau gambar sebelum diunggah
   function previewImage() {
     const file = document.getElementById('foto').files[0];
     const preview = document.getElementById('preview');
@@ -316,9 +371,50 @@
     } else preview.style.display = 'none';
   }
 
+  // Mengosongkan form dan mengubah mode ke "CREATE"
+  function resetForm() {
+      document.getElementById('editLogId').value = ""; 
+      document.getElementById('judul').value = "";
+      document.getElementById('deskripsi').value = "";
+      document.getElementById('jam_mulai').value = "";
+      document.getElementById('jam_selesai').value = "";
+      document.getElementById('foto').value = "";
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('tgl').valueAsDate = new Date();
+      
+      const btn = document.getElementById('btnKirim');
+      btn.innerText = "KIRIM LAPORAN";
+      btn.classList.remove('btn-warning');
+      btn.classList.add('btn-success');
+  }
+
+  // Memasukkan data logbook ke form dan mengubah mode ke "UPDATE"
+  function editLog(logData) {
+      document.getElementById('editLogId').value = logData.id;
+      document.getElementById('tgl').value = logData.tanggal;
+      document.getElementById('jam_mulai').value = logData.jam_mulai;
+      document.getElementById('jam_selesai').value = logData.jam_selesai;
+      document.getElementById('judul').value = logData.judul;
+      document.getElementById('deskripsi').value = logData.deskripsi;
+      
+      const btn = document.getElementById('btnKirim');
+      btn.innerText = "UPDATE LAPORAN";
+      btn.classList.remove('btn-success');
+      btn.classList.add('btn-warning');
+      
+      const collapseElement = document.getElementById('formCollapse');
+      const bsCollapse = new bootstrap.Collapse(collapseElement, { toggle: false });
+      bsCollapse.show();
+      window.scrollTo(0,0);
+  }
+
+  function cancelEdit() { resetForm(); }
+
+  // Fungsi utama untuk Mengirim atau Memperbarui Logbook
   function kirimLogbook() {
     const data = {
        token: token,
+       id: document.getElementById('editLogId').value, 
        tanggal: document.getElementById('tgl').value,
        jam_mulai: document.getElementById('jam_mulai').value,
        jam_selesai: document.getElementById('jam_selesai').value,
@@ -332,21 +428,19 @@
     }
 
     const btn = document.getElementById('btnKirim');
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> MENGIRIM...'; 
+    const originalText = btn.innerText;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> PROSES...'; 
     btn.disabled = true;
 
     const send = (base64) => {
        data.foto = base64;
        google.script.run.withSuccessHandler(res => {
-          btn.innerHTML = "KIRIM LAPORAN"; btn.disabled = false;
+          btn.innerHTML = originalText; 
+          btn.disabled = false;
+          
           if(res.success) {
-             Swal.fire('Sukses', 'Laporan tersimpan!', 'success');
-             document.getElementById('judul').value = '';
-             document.getElementById('deskripsi').value = '';
-             document.getElementById('jam_mulai').value = '';
-             document.getElementById('jam_selesai').value = '';
-             document.getElementById('foto').value = '';
-             document.getElementById('preview').style.display = 'none';
+             Swal.fire('Sukses', data.id ? 'Laporan diperbarui!' : 'Laporan tersimpan!', 'success');
+             resetForm();
              new bootstrap.Collapse(document.getElementById('formCollapse')).hide();
              loadHistory();
           } else {
@@ -361,6 +455,31 @@
     } else send("");
   }
 
+  // Menghapus Logbook spesifik
+  function deleteLog(id) {
+      Swal.fire({
+          title: 'Hapus Logbook?',
+          text: "Data tidak bisa dikembalikan!",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          confirmButtonText: 'Ya, Hapus'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              Swal.showLoading();
+              google.script.run.withSuccessHandler(res => {
+                  if(res.success) {
+                      Swal.fire('Terhapus', 'Logbook dihapus.', 'success');
+                      loadHistory();
+                  } else {
+                      Swal.fire('Gagal', res.error, 'error');
+                  }
+              }).api('studentDeleteLog', {token: token, logId: id}); 
+          }
+      })
+  }
+
+  // Merender daftar riwayat logbook pribadi
   function loadHistory() {
      google.script.run.withSuccessHandler(res => {
         const div = document.getElementById('myHistoryList');
@@ -374,6 +493,16 @@
            let img = l.foto ? `<img src="${l.foto}" class="w-100 rounded mt-2 border">` : '';
            let fb = l.feedback ? `<div class="bg-warning bg-opacity-10 p-2 rounded mt-2 small text-dark border border-warning"><i class="bi bi-chat-quote-fill"></i> <b>Guru:</b> ${l.feedback}</div>` : '';
            
+           // Safe JSON Stringify untuk menghindari error karakter kutip pada parameter onclick
+           let safeLog = JSON.stringify(l).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+
+           let actions = `
+             <div class="mt-3 d-flex justify-content-end gap-2 border-top pt-2">
+                <button class="btn btn-sm btn-outline-primary" onclick='editLog(${safeLog})'><i class="bi bi-pencil"></i> Edit</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteLog('${l.id}')"><i class="bi bi-trash"></i> Hapus</button>
+             </div>
+           `;
+
            html += `
              <div class="card card-custom history-item">
                <div class="d-flex justify-content-between small text-muted mb-1">
@@ -382,13 +511,14 @@
                </div>
                <h6 class="fw-bold text-primary m-0 mt-2">${l.judul}</h6>
                <p class="small mb-0 text-dark mt-1" style="white-space: pre-wrap;">${l.deskripsi}</p>
-               ${img} ${fb}
+               ${img} ${fb} ${actions}
              </div>`;
         });
         div.innerHTML = html;
      }).api('getHistory', {token: token});
   }
   
+  // Memanggil API untuk membuat PDF Laporan via Google Docs
   function exportDoc() {
      Swal.fire({
        title: 'Export Jurnal?',
@@ -403,7 +533,7 @@
          google.script.run.withSuccessHandler(res => {
             if(res.success) {
                Swal.fire({ title: 'Berhasil!', text: 'Dokumen siap.', icon: 'success', confirmButtonText: 'Buka' }).then(() => {
-                  window.open(res.url, '_blank');
+                  window.open(res.url, '_blank'); // Buka PDF di tab baru
                });
             } else Swal.fire('Gagal', res.error, 'error');
          }).api('exportLogbook', {token: token});
@@ -411,7 +541,9 @@
      });
   }
 
-  // --- EXPLORE FUNCTIONS ---
+  /* ==========================================
+     LOGIKA JELAJAH (PUBLIC FEED)
+     ========================================== */
   function loadPublicFeed() {
      const div = document.getElementById('publicFeedList');
      div.innerHTML = '<div class="text-center py-4"><span class="spinner-border text-primary"></span></div>';
@@ -428,6 +560,7 @@
            
            let avatarContent = initial;
            let avatarStyle = '';
+           // Mengatur display avatar (Bisa foto asli atau inisial nama)
            if(l.owner_foto) {
              avatarContent = '';
              avatarStyle = `background-image: url('${l.owner_foto}'); color: transparent;`;
@@ -452,7 +585,11 @@
      }).api('getPublicFeed', {token: token});
   }
 
-  // --- PROFILE FUNCTIONS ---
+  /* ==========================================
+     LOGIKA PROFIL & AUTENTIKASI
+     ========================================== */
+  
+  // Pratinjau Foto Profil sebelum di-save
   function previewEditFoto() {
      const file = document.getElementById('editFotoInput').files[0];
      if(file) {
@@ -462,6 +599,7 @@
      }
   }
 
+  // Menyimpan data profil baru
   function saveProfile() {
      const newData = {
        nama: document.getElementById('editNama').value,
@@ -489,13 +627,13 @@
                  if(res.success) {
                     Swal.fire('Berhasil', 'Profil diperbarui!', 'success');
                     
-                    // Update Local State
+                    // Update objek lokal agar UI ikut berubah
                     userData.nama = newData.nama;
                     userData.jurusan = newData.jurusan;
                     userData.tahun = newData.tahun; 
                     
-                    // Update Photo (Force Cache Refresh)
                     if(res.newPhotoUrl) {
+                        // Tambahkan argumen waktu agar browser tidak men-cache foto lama
                         const newUrl = res.newPhotoUrl + '&t=' + new Date().getTime();
                         userData.foto_profil = newUrl;
                         document.getElementById('pFoto').src = newUrl;
@@ -519,7 +657,7 @@
      });
   }
 
-  // --- LOGOUT ---
+  // Logout - Membersihkan Local Storage dan Redirect via backend URL
   function logout() {
     Swal.fire({
       title: 'Keluar?',
@@ -533,12 +671,20 @@
       if (result.isConfirmed) {
         localStorage.clear();
         
-        google.script.run.withSuccessHandler(url => {
+        Swal.fire({ 
+            title: 'Keluar...', 
+            text: 'Mengalihkan ke halaman login.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading() } 
+        });
+        
+        google.script.run.withSuccessHandler(baseUrl => {
             const link = document.createElement('a');
-            link.href = url; // Redirect to Main Login
-            link.target = "_top";
+            link.href = baseUrl;
+            link.target = '_top';
             document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         }).getAppUrl();
       }
     });
