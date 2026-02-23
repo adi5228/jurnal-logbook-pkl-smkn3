@@ -1,119 +1,130 @@
 /**
- * TEACHERSERVICE.GS (Saved as TeacherService.js)
- * Description:
- * Manages functionality specific to Teachers (Mentors):
- * - Retrieving list of assigned students (mentees)
- * - Viewing logbooks of assigned students
- * - Providing feedback/grading on logbooks
- * - Changing personal password
+ * ============================================================================
+ * TEACHER SERVICE
+ * Deskripsi: Modul backend yang menangani seluruh logika bisnis untuk pengguna
+ * dengan role 'GURU'. Mencakup fungsionalitas pemantauan siswa bimbingan, 
+ * pemberian feedback/catatan pada jurnal siswa, dan manajemen profil guru.
+ * ============================================================================
  */
 
-const TeacherService = {
+var TeacherService = {
 
   /**
-   * 0. GET AVAILABLE YEARS
-   * Retrieves unique years from student data to populate filter dropdowns for teachers.
-   * * @return {Object} { success: boolean, years: Array<string> }
+   * --------------------------------------------------------------------------
+   * 0. AMBIL TAHUN TERSEDIA (Untuk Filter Dropdown)
+   * --------------------------------------------------------------------------
+   * Memindai seluruh data siswa yang ada di sistem untuk mendapatkan daftar 
+   * tahun PKL/Angkatan yang terdaftar. Digunakan untuk filter di dashboard Guru.
+   * * @returns {Object} JSON berisi array tahun yang sudah diurutkan menurun.
    */
   getAvailableYears: function() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sUsers = ss.getSheetByName('users');
-    const years = new Set(); 
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sUsers = ss.getSheetByName('users');
+    var years = new Set(); // Menggunakan Set untuk mencegah duplikasi tahun
 
-    // Scan Years from Users Sheet (Column H / Index 7)
+    // Scan Tahun dari sheet User (Kolom H / Index 7)
     if (sUsers) {
-      const uData = sUsers.getDataRange().getDisplayValues();
-      for (let i = 1; i < uData.length; i++) {
-        const y = String(uData[i][7]).trim();
-        // Regex to ensure only 4-digit years
+      var uData = sUsers.getDataRange().getDisplayValues();
+      for (var i = 1; i < uData.length; i++) {
+        var y = String(uData[i][7]).trim();
+        // Hanya ambil data yang bentuknya 4 digit angka (misal: 2024, 2025)
         if (y && y.match(/^\d{4}$/)) years.add(y);
       }
     }
     
-    // Sort Descending (Newest first)
-    const sortedYears = Array.from(years).sort().reverse();
+    // Konversi objek Set menjadi Array, lalu urutkan secara Descending (Terbaru di atas)
+    var sortedYears = Array.from(years).sort().reverse();
     return { success: true, years: sortedYears };
   },
 
   /**
-   * 1. GET MY STUDENTS (MENTEES)
-   * Retrieves a list of students assigned to the logged-in teacher.
-   * Supports filtering by year (Cohort).
-   * * @param {Object} user - The logged-in teacher object
-   * @param {string} targetYear - Optional year to filter students
-   * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 1. AMBIL DAFTAR SISWA BINAAN (DENGAN FILTER TAHUN)
+   * --------------------------------------------------------------------------
+   * Menampilkan daftar siswa yang dibimbing secara khusus oleh Guru yang sedang
+   * login. Data digabungkan dari tabel 'students_map' dan 'users'.
+   * * @param {Object} user - Objek Guru yang sedang login.
+   * @param {string} targetYear - Tahun yang dipilih dari dropdown filter.
+   * @returns {Object} JSON berisi array of object data siswa binaan.
    */
   getMyStudents: function(user, targetYear) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sMap = ss.getSheetByName('students_map');
-    const sUsers = ss.getSheetByName('users');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sMap = ss.getSheetByName('students_map');
+    var sUsers = ss.getSheetByName('users');
     
-    // Get Data
-    const maps = sMap.getDataRange().getDisplayValues();
-    const users = sUsers.getDataRange().getDisplayValues();
+    // Ambil Data Relasi (Mapping) & Data Profil (User)
+    var maps = sMap.getDataRange().getDisplayValues();
+    var users = sUsers.getDataRange().getDisplayValues();
     
-    const filterYear = (targetYear) ? String(targetYear).trim() : null;
+    var filterYear = (targetYear) ? String(targetYear).trim() : null;
 
-    // 1. Build User Detail Dictionary from 'users' sheet (NISN -> {Photo, Year})
-    const userDetails = {};
-    for(let i = 1; i < users.length; i++) {
-       // Index: 0=NISN, 6=Photo, 7=Year
+    // A. Buat HashMap (Kamus Data) Siswa dari Sheet Users (NISN -> {Foto, Tahun})
+    // Ini lebih cepat daripada melakukan nested loop array di dalam array.
+    var userDetails = {};
+    for(var i = 1; i < users.length; i++) {
        userDetails[String(users[i][0])] = {
           foto: (users[i].length > 6) ? users[i][6] : "",
           tahun: (users[i].length > 7) ? String(users[i][7]).trim() : ""
        };
     }
     
-    const myNip = String(user.username || user.nisn).trim(); // Teachers login using NIP (Username)
-    const list = [];
+    // Username guru biasanya merupakan Nomor Urut / NIP
+    var myNip = String(user.username || user.nisn).trim(); 
+    var list = [];
     
-    // 2. Loop through Student Map
-    // Structure: [0]NISN, [1]Name, [2]Major, [3]Teacher_NIP_Name
-    for(let j = 1; j < maps.length; j++) {
-      // Check if this teacher is the assigned mentor
-      // We check if the teacher's NIP is contained within the map entry string
+    // B. Looping sheet Mapping Siswa (Mencari siswa yang pembimbingnya = Guru ini)
+    // Struktur Kolom Sheet Map: [0]NISN, [1]Nama, [2]Jurusan, [3]NIP_Guru
+    for(var j = 1; j < maps.length; j++) {
+      
+      // Data di kolom pembimbing biasanya berformat "NIP - Nama Guru"
+      // Kita cek apakah 'myNip' ada di dalam string tersebut.
       if(String(maps[j][3]).includes(myNip)) {
-          
-          const siswaNisn = String(maps[j][0]);
-          const siswaData = userDetails[siswaNisn] || { foto: "", tahun: "" };
+         
+         var siswaNisn = String(maps[j][0]);
+         // Ambil detail foto dan tahun dari HashMap yang dibuat di Langkah A
+         var siswaData = userDetails[siswaNisn] || { foto: "", tahun: "" };
 
-          // --- FILTER LOGIC ---
-          if (filterYear && siswaData.tahun !== filterYear) {
-             continue; // Skip if year doesn't match
-          }
-          
-          list.push({
-            nisn: siswaNisn,
-            nama: maps[j][1],
-            jurusan: maps[j][2],
-            foto: siswaData.foto,
-            tahun: siswaData.tahun
-          });
+         // Jika filter tahun diaktifkan, abaikan siswa yang tahunnya tidak sesuai
+         if (filterYear && siswaData.tahun !== filterYear) {
+            continue; 
+         }
+         
+         // Masukkan ke array jika lolos filter
+         list.push({
+           nisn: siswaNisn,
+           nama: maps[j][1],
+           jurusan: maps[j][2],
+           foto: siswaData.foto,
+           tahun: siswaData.tahun
+         });
       }
     }
     
-    // Sort Alphabetically by Name
+    // Urutkan daftar siswa secara alfabetis berdasarkan Nama
     list.sort(function(a, b) { return a.nama.localeCompare(b.nama); });
     
     return { success: true, list: list };
   },
 
   /**
-   * 2. GET STUDENT LOGBOOKS
-   * Retrieves all logbook entries for a specific student (targetNisn).
-   * Used when a teacher clicks on a student card.
-   * * @param {string} targetNisn - The NISN of the student
-   * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 2. LIHAT LOGBOOK SISWA TERTENTU
+   * --------------------------------------------------------------------------
+   * Mengambil semua catatan kegiatan PKL dari seorang siswa secara spesifik
+   * ketika guru meng-klik nama siswa tersebut di sidebar.
+   * * @param {string} targetNisn - NISN milik siswa yang akan dilihat.
+   * @returns {Object} JSON berisi riwayat logbook siswa.
    */
   getStudentLogbooks: function(targetNisn) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sLogs = ss.getSheetByName('logbooks');
-    const logs = sLogs.getDataRange().getDisplayValues();
-    const list = [];
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sLogs = ss.getSheetByName('logbooks');
+    var logs = sLogs.getDataRange().getDisplayValues();
+    var list = [];
     
-    // Iterate backwards (newest first)
-    for(let i = logs.length - 1; i >= 1; i--) {
-      if(String(logs[i][1]) == String(targetNisn)) {
+    // Loop dari bawah ke atas (Terbaru ke Terlama)
+    for(var i = logs.length - 1; i >= 1; i--) {
+      // Bandingkan NISN di sheet logbook dengan target NISN
+      if(String(logs[i][1]).replace(/'/g, '').trim() === String(targetNisn).trim()) {
         list.push({
           id: logs[i][0],
           tanggal: logs[i][2],
@@ -129,44 +140,51 @@ const TeacherService = {
   },
 
   /**
-   * 3. SAVE FEEDBACK
-   * Saves teacher's feedback/comments to a specific logbook entry.
-   * * @param {Object} data - { id: logbookId, feedback: string }
-   * @return {Object} { success: boolean, error?: string }
+   * --------------------------------------------------------------------------
+   * 3. SIMPAN FEEDBACK GURU
+   * --------------------------------------------------------------------------
+   * Menyimpan catatan, tanggapan, atau persetujuan (ACC) dari guru pembimbing
+   * untuk satu entri logbook tertentu.
+   * * @param {Object} data - Payload dari frontend (id logbook, teks feedback).
    */
   saveFeedback: function(data) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sLogs = ss.getSheetByName('logbooks');
-    const rows = sLogs.getDataRange().getDisplayValues();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sLogs = ss.getSheetByName('logbooks');
+    var rows = sLogs.getDataRange().getDisplayValues();
     
-    for(let i = 1; i < rows.length; i++) {
-      if(String(rows[i][0]) == String(data.id)) { // Match Logbook ID
-         sLogs.getRange(i+1, 9).setValue(data.feedback); // Column I (Index 9) is Feedback
+    // Cari baris logbook berdasarkan UUID
+    for(var i = 1; i < rows.length; i++) {
+      if(String(rows[i][0]) === String(data.id)) { 
+         // Update Kolom I (Index 9) yang berisi Feedback Guru
+         sLogs.getRange(i + 1, 9).setValue(data.feedback); 
          return { success: true };
       }
     }
-    return { success: false, error: "Logbook tidak ditemukan" };
+    return { success: false, error: "Data Logbook tidak ditemukan di database." };
   },
 
   /**
-   * 4. CHANGE TEACHER PASSWORD
-   * Allows a logged-in teacher to update their own password.
-   * * @param {Object} user - Logged-in teacher object
-   * @param {string} newPass - New password
-   * @return {Object} { success: boolean, error?: string }
+   * --------------------------------------------------------------------------
+   * 4. GANTI PASSWORD GURU
+   * --------------------------------------------------------------------------
+   * Memungkinkan guru untuk mengubah password login mereka sendiri dari dalam
+   * dashboard guru.
+   * * @param {Object} user - Objek Guru yang sedang login.
+   * @param {string} newPass - Password baru yang diinputkan.
    */
   changePassword: function(user, newPass) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const rows = sheet.getDataRange().getValues();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    var rows = sheet.getDataRange().getValues();
     
-    for(let i = 1; i < rows.length; i++) {
-       // Find row by teacher's username/NIP
-       if(String(rows[i][0]) === String(user.username)) {
-          // Update Column B (Password)
-          sheet.getRange(i+1, 2).setValue(newPass);
+    for(var i = 1; i < rows.length; i++) {
+       // Cari baris user berdasarkan username (Nomor Urut/NIP guru)
+       if(String(rows[i][0]) === String(user.username || user.nisn)) {
+          // Update Kolom B (Index 2) yaitu kolom Password
+          sheet.getRange(i + 1, 2).setValue(newPass);
           return { success: true };
        }
     }
-    return { success: false, error: "User guru tidak ditemukan." };
+    return { success: false, error: "Akun guru tidak ditemukan dalam sistem." };
   }
+
 };
