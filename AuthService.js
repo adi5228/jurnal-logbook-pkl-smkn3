@@ -1,43 +1,47 @@
 /**
- * AUTHSERVICE.GS (Saved as AuthService.js)
- * Description:
- * Manages all authentication-related logic, including user login, 
- * session validation, and new student registration.
- * Handles interaction with 'users', 'students_map', and 'teachers' sheets.
+ * ============================================================================
+ * AUTH SERVICE
+ * Deskripsi: Modul ini bertanggung jawab untuk menangani proses Autentikasi.
+ * Mencakup proses Login, Validasi Token Sesi, Pendaftaran (Register) Siswa,
+ * dan pengambilan daftar referensi (misal: daftar Guru untuk form registrasi).
+ * ============================================================================
  */
 
-const AuthService = {
+var AuthService = {
   
   /**
+   * --------------------------------------------------------------------------
    * 1. LOGIN SYSTEM
-   * Authenticates a user based on username (NISN/NIP) and password.
-   * Generates a new session token upon successful login.
-   * * @param {string} u - Username or NISN
-   * @param {string} p - Password
-   * @return {Object} Response object { success: boolean, token?: string, user?: Object, error?: string }
+   * --------------------------------------------------------------------------
+   * Memeriksa kecocokan username (NISN/ID) dan password yang diinput user 
+   * dengan data di dalam sheet 'users'. Jika cocok, buatkan Session Token unik.
+   * * @param {string} u - Username (Bisa NISN Siswa, ID Guru, atau 'admin').
+   * @param {string} p - Password text murni (plaintext).
+   * @returns {Object} JSON response (success boolean, token, role, dan data profil).
    */
   login: function(u, p) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const data = sheet.getDataRange().getDisplayValues();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    var data = sheet.getDataRange().getDisplayValues();
     
-    // Loop through rows (skip header at index 0)
-    for(let i = 1; i < data.length; i++) {
-      // Check credentials (trim to avoid whitespace issues)
-      // Column 0: Username, Column 1: Password
-      if(String(data[i][0]).trim() == String(u).trim() && String(data[i][1]).trim() == String(p).trim()) {
+    // Looping data mulai dari index 1 (melewati baris header di row 0)
+    for(var i = 1; i < data.length; i++) {
+      var dbUser = String(data[i][0]).trim();
+      var dbPass = String(data[i][1]).trim();
+
+      // Cek kredensial
+      if(dbUser === String(u).trim() && dbPass === String(p).trim()) {
         
-        // Generate New Session Token
-        const token = Utilities.getUuid();
+        // Buat Token Sesi Baru
+        var token = Utilities.getUuid();
         
-        // Save token to database (Column F / Index 5)
-        // i + 1 because sheet rows are 1-based
-        sheet.getRange(i+1, 6).setValue(token); 
+        // Simpan token tersebut ke database (Kolom F / Index 5)
+        sheet.getRange(i + 1, 6).setValue(token); 
         
-        // Handle name fallback
-        const dbNama = data[i][3] ? data[i][3] : data[i][0];
+        // Cek Fallback Nama (Jika kolom nama kosong, gunakan username sebagai nama)
+        var dbNama = data[i][3] ? data[i][3] : data[i][0];
         
-        // Get Year (Column H / Index 7)
-        const dbTahun = data[i][7] ? data[i][7] : "";
+        // Ambil Tahun (Kolom H / Index 7)
+        var dbTahun = data[i][7] ? data[i][7] : "";
 
         return { 
           success: true, 
@@ -53,26 +57,31 @@ const AuthService = {
         };
       }
     }
+    
+    // Jika looping selesai dan tidak ada yang cocok
     return { success: false, error: "Username atau Password Salah!" };
   },
   
   /**
-   * 2. VALIDATE TOKEN (AUTO-LOGIN)
-   * Checks if a provided session token is valid and active in the database.
-   * * @param {string} token - The session token from client storage
-   * @return {Object|null} User object if valid, null otherwise
+   * --------------------------------------------------------------------------
+   * 2. VALIDASI TOKEN (AUTO-LOGIN / SESSION CHECK)
+   * --------------------------------------------------------------------------
+   * Fungsi krusial untuk keamanan. Dipanggil setiap kali user melakukan aksi 
+   * (CRUD) atau me-refresh halaman, untuk memastikan token di LocalStorage 
+   * browser masih valid dan ada di database.
+   * * @param {string} token - UUID Token dari LocalStorage client.
+   * @returns {Object|null} Objek data user jika valid, atau null jika tidak valid.
    */
   validateToken: function(token) {
-    if(!token) return null;
+    if(!token) return null; // Tolak langsung jika token kosong
     
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const data = sheet.getDataRange().getDisplayValues();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    var data = sheet.getDataRange().getDisplayValues();
     
-    for(let i = 1; i < data.length; i++) {
-      // Check Column F (Index 5) for token match
-      if(String(data[i][5]) == String(token)) {
-        const dbNama = data[i][3] ? data[i][3] : data[i][0];
-        const dbTahun = data[i][7] ? data[i][7] : "";
+    for(var i = 1; i < data.length; i++) {
+      if(String(data[i][5]) === String(token)) {
+        var dbNama = data[i][3] ? data[i][3] : data[i][0];
+        var dbTahun = data[i][7] ? data[i][7] : "";
         
         return { 
           nisn: data[i][0], 
@@ -83,49 +92,52 @@ const AuthService = {
         };
       }
     }
-    return null; 
+    
+    return null; // Token tidak ditemukan (sesi sudah ditimpa/login di perangkat lain)
   },
   
   /**
-   * 3. REGISTER NEW STUDENT
-   * Registers a new student account.
-   * Saves to 'users' sheet and creates a mapping entry in 'students_map'.
-   * * @param {Object} data - Registration data { nisn, password, nama, jurusan, nip_guru, tahun }
-   * @return {Object} Response object { success: boolean, error?: string }
+   * --------------------------------------------------------------------------
+   * 3. REGISTER SISWA BARU
+   * --------------------------------------------------------------------------
+   * Menerima payload data dari form registrasi, melakukan validasi duplikasi 
+   * NISN, lalu menyimpan data ke sheet 'users' (sebagai akun) dan 'students_map' 
+   * (untuk relasi antara siswa dan guru pembimbing).
+   * * @param {Object} data - Payload dari frontend (nisn, nama, jurusan, tahun, nip_guru, password).
+   * @returns {Object} JSON response status pendaftaran.
    */
   register: function(data) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sUsers = ss.getSheetByName('users');
-    let sMap = ss.getSheetByName('students_map'); 
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sUsers = ss.getSheetByName('users');
+    var sMap = ss.getSheetByName('students_map'); 
     
-    // Validate Year (Use input or default to current year)
-    const inputTahun = data.tahun || new Date().getFullYear();
+    // Validasi Tahun: Gunakan tahun input, jika kosong gunakan tahun berjalan server
+    var inputTahun = data.tahun || new Date().getFullYear();
     
-    // Check for Duplicate NISN
-    const allUsers = sUsers.getDataRange().getDisplayValues();
-    for(let i = 1; i < allUsers.length; i++) {
-       if(String(allUsers[i][0]).trim() == String(data.nisn).trim()) {
-         return { success: false, error: "NISN sudah terdaftar!" };
+    // Cek Duplikasi NISN di sheet 'users'
+    var allUsers = sUsers.getDataRange().getDisplayValues();
+    for(var i = 1; i < allUsers.length; i++) {
+       if(String(allUsers[i][0]).trim() === String(data.nisn).trim()) {
+         return { success: false, error: "Pendaftaran Gagal: NISN sudah terdaftar!" };
        }
     }
     
     try {
-      // A. Save New User to 'users' sheet
-      // Format: [username, password, role, nama, jurusan, token, foto_profil, tahun]
-      // Note: Adding "'" to NISN forces it to be treated as a string in Sheets
+      // A. Simpan Akun Baru ke Sheet 'users'
+      // Struktur Kolom: [Username(NISN), Password, Role, Nama, Jurusan, Token, Foto, Tahun]
       sUsers.appendRow([
-        "'" + data.nisn, 
+        "'" + data.nisn,  // Gunakan tanda kutip tunggal agar Google Sheet membaca sebagai teks murni
         data.password, 
         'SISWA', 
         data.nama, 
         data.jurusan, 
-        '',  // Token empty initially
-        '',  // Photo empty initially
-        inputTahun // Column H (Year)
+        '',  // Token dikosongkan saat baru register
+        '',  // Foto dikosongkan
+        inputTahun 
       ]);
       
-      // B. Save Teacher Mapping to 'students_map' sheet
-      if (!sMap) sMap = ss.insertSheet('students_map'); // Create sheet if missing
+      // B. Simpan Relasi Siswa-Guru ke Sheet 'students_map'
+      if (!sMap) sMap = ss.insertSheet('students_map'); // Auto-create sheet jika terhapus
       
       sMap.appendRow([
         "'" + data.nisn, 
@@ -137,23 +149,26 @@ const AuthService = {
       return { success: true };
       
     } catch(e) {
-      return { success: false, error: "Gagal menyimpan data: " + e.toString() };
+      return { success: false, error: "Gagal menyimpan data ke server: " + e.toString() };
     }
   },
   
   /**
-   * 4. GET TEACHER LIST
-   * Retrieves a list of all teachers for the registration dropdown.
-   * * @return {Object} Response object { success: boolean, list: Array<{nip, nama}> }
+   * --------------------------------------------------------------------------
+   * 4. AMBIL DAFTAR GURU (GET TEACHER LIST)
+   * --------------------------------------------------------------------------
+   * Digunakan oleh form registrasi siswa untuk memilih Guru Pembimbing.
+   * Data diambil dari sheet 'teachers' dan diurutkan berdasarkan abjad (A-Z).
+   * * @returns {Object} JSON response berisi array of objects (Daftar Guru).
    */
   getTeacherList: function() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName('teachers');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('teachers');
     
-    // Fallback: Case-insensitive search if 'teachers' sheet not found directly
+    // Fallback: Jika penamaan sheet case-sensitive bermasalah, cari manual
     if (!sheet) {
-      const sheets = ss.getSheets();
-      for (let i = 0; i < sheets.length; i++) {
+      var sheets = ss.getSheets();
+      for (var i = 0; i < sheets.length; i++) {
         if (sheets[i].getName().toLowerCase() === 'teachers') {
           sheet = sheets[i];
           break;
@@ -161,24 +176,24 @@ const AuthService = {
       }
     }
 
+    // Jika sheet benar-benar tidak ada, kembalikan array kosong (mencegah crash)
     if (!sheet) return { success: true, list: [] };
 
-    // Force flush to ensure latest data read
+    // PENTING: Paksa server membaca state data terbaru (bypass internal cache GAS)
     SpreadsheetApp.flush();
 
-    // Avoid reading header row only
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return { success: true, list: [] }; 
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { success: true, list: [] }; // Hanya ada baris header
 
-    // Get Data (Start Row 2, Col 1, NumRows, NumCols 2)
-    const data = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
-    const list = [];
+    // Ambil rentang data spesifik (menghindari array kosong dari baris yang terformat tapi kosong)
+    var data = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
+    var list = [];
     
-    for(let i = 0; i < data.length; i++) {
-      const nip = String(data[i][0]).trim();
-      const nama = String(data[i][1]).trim();
+    for(var i = 0; i < data.length; i++) {
+      var nip = String(data[i][0]).trim();  // Bisa berisi ID Urut / NIP
+      var nama = String(data[i][1]).trim(); // Nama Guru
 
-      // Ensure valid data
+      // Filter: Hanya ambil baris yang benar-benar memiliki isi
       if(nip !== "" && nama !== "") {
         list.push({
           nip: nip, 
@@ -187,7 +202,7 @@ const AuthService = {
       }
     }
     
-    // Sort alphabetically by Name
+    // Sorting Array: Urutkan nama guru secara alfabetis (A-Z)
     list.sort(function(a, b) {
       return a.nama.localeCompare(b.nama);
     });
