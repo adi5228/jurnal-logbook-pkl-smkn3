@@ -1,90 +1,96 @@
 /**
- * ADMINSERVICE.GS (Saved as AdminService.js)
- * Description:
- * Manages all administrative functions:
- * - Dashboard Statistics (Counts of Students, Teachers, Logbooks)
- * - User Management (CRUD: Create, Read, Update, Delete Users)
- * - Monitoring Logbook Submissions
- * - Admin Password Change
- * - Auto-sync between 'users' and 'teachers'/'students_map' sheets
+ * ============================================================================
+ * ADMIN SERVICE
+ * Deskripsi: Modul backend yang menangani seluruh logika bisnis untuk pengguna
+ * dengan role 'ADMIN'. Mencakup fungsi analisis dashboard (Statistik), 
+ * manajemen CRUD pengguna (Siswa, Guru, Admin), dan pemantauan seluruh logbook.
+ * ============================================================================
  */
 
-const AdminService = {
+var AdminService = {
   
   /**
-   * 0. GET AVAILABLE YEARS
-   * Scans 'users' and 'logbooks' sheets to find all unique years present in the data.
-   * Used to populate dropdown filters on the Admin Dashboard.
-   * * @return {Object} { success: boolean, years: Array<string> }
+   * --------------------------------------------------------------------------
+   * 0. AMBIL TAHUN TERSEDIA (FILTER TAHUN)
+   * --------------------------------------------------------------------------
+   * Mengambil semua tahun unik yang tercatat di dalam sistem, baik dari 
+   * tahun angkatan siswa di sheet 'users' maupun dari tanggal logbook.
+   * Digunakan untuk mengisi opsi dropdown filter di UI Admin.
+   * * @returns {Object} JSON berisi array tahun yang sudah diurutkan menurun (Terbaru -> Terlama).
    */
   getAvailableYears: function() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sUsers = ss.getSheetByName('users');
-    const sLogs = ss.getSheetByName('logbooks');
-    const years = new Set(); 
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sUsers = ss.getSheetByName('users');
+    var sLogs = ss.getSheetByName('logbooks');
+    var years = new Set(); // Menggunakan Set agar tahun tidak duplikat
 
-    // 1. Scan Years from Users (Column H / Index 7)
+    // Ambil tahun dari data pengguna (Siswa)
     if (sUsers) {
-      const uData = sUsers.getDataRange().getDisplayValues();
-      for (let i = 1; i < uData.length; i++) {
-        const y = String(uData[i][7]).trim();
-        // Regex to ensure only 4-digit years are added
+      var uData = sUsers.getDataRange().getDisplayValues();
+      for (var i = 1; i < uData.length; i++) {
+        var y = String(uData[i][7]).trim(); // Kolom H (Index 7) adalah Tahun
+        // Hanya ambil jika formatnya benar-benar 4 digit angka
         if (y && y.match(/^\d{4}$/)) years.add(y); 
       }
     }
 
-    // 2. Scan Years from Logbooks (Column C / Index 2)
+    // Ambil tahun dari tanggal entry logbook
     if (sLogs) {
-      const lData = sLogs.getDataRange().getDisplayValues();
-      for (let i = 1; i < lData.length; i++) {
+      var lData = sLogs.getDataRange().getDisplayValues();
+      for (var j = 1; j < lData.length; j++) {
         try {
-           const d = new Date(lData[i][2]);
+           var d = new Date(lData[j][2]); // Kolom C (Index 2) adalah Tanggal
            if(!isNaN(d.getTime())) years.add(String(d.getFullYear()));
-        } catch(e) {}
+        } catch(e) {
+           // Skip baris jika format tanggal gagal diparsing
+        }
       }
     }
 
-    // Sort descending (newest first)
-    const sortedYears = Array.from(years).sort().reverse();
+    // Konversi Set ke Array, urutkan, lalu balik (reverse) agar tahun terbaru di atas
+    var sortedYears = Array.from(years).sort().reverse();
     return { success: true, years: sortedYears };
   },
 
   /**
-   * 1. DASHBOARD STATISTICS
-   * Calculates total counts for dashboard cards, optionally filtered by year.
-   * * @param {string} targetYear - Optional year filter
-   * @return {Object} { success: boolean, countSiswa, countGuru, totalLog }
+   * --------------------------------------------------------------------------
+   * 1. DASHBOARD STATISTIK
+   * --------------------------------------------------------------------------
+   * Menghitung total entitas di dalam sistem berdasarkan tahun tertentu.
+   * * @param {string} targetYear - (Opsional) Tahun filter. Jika kosong, hitung semua.
+   * @returns {Object} Total Siswa, Total Guru, dan Total Logbook.
    */
   getStats: function(targetYear) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sUsers = ss.getSheetByName('users');
-    const sLogs = ss.getSheetByName('logbooks');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sUsers = ss.getSheetByName('users');
+    var sLogs = ss.getSheetByName('logbooks');
     
     if (!sUsers || !sLogs) return { success: true, countSiswa: 0, countGuru: 0, totalLog: 0 };
     
-    const filterYear = (targetYear) ? String(targetYear).trim() : null;
+    var filterYear = (targetYear) ? String(targetYear).trim() : null;
 
-    // A. Count Users
-    const users = sUsers.getDataRange().getDisplayValues();
-    let cSiswa = 0;
-    let cGuru = 0;
+    var users = sUsers.getDataRange().getDisplayValues();
+    var cSiswa = 0;
+    var cGuru = 0;
     
-    for(let i = 1; i < users.length; i++) {
-       const role = String(users[i][2]).toUpperCase().trim();
-       const userYear = String(users[i][7]).trim();
+    // Hitung User
+    for(var i = 1; i < users.length; i++) {
+       var role = String(users[i][2]).toUpperCase().trim();
+       var userYear = String(users[i][7]).trim();
 
+       // Skip jika filter tahun aktif dan tidak cocok (Guru biasanya tidak punya tahun, jadi bisa ter-skip)
        if (filterYear && userYear !== filterYear) continue;
 
        if(role === 'SISWA') cSiswa++;
        else if(role === 'GURU') cGuru++;
     }
 
-    // B. Count Logbooks
-    const logs = sLogs.getDataRange().getDisplayValues();
-    let cLog = 0;
-    for(let j = 1; j < logs.length; j++) {
+    // Hitung Logbook
+    var logs = sLogs.getDataRange().getDisplayValues();
+    var cLog = 0;
+    for(var j = 1; j < logs.length; j++) {
        if (filterYear) {
-          const d = new Date(logs[j][2]);
+          var d = new Date(logs[j][2]);
           if(!isNaN(d.getTime()) && String(d.getFullYear()) === filterYear) {
              cLog++;
           }
@@ -97,20 +103,21 @@ const AdminService = {
   },
 
   /**
-   * 2. GET ALL USERS
-   * Retrieves a list of all registered users, filtered by year.
-   * * @param {string} targetYear - Optional year filter
-   * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 2. AMBIL SEMUA DATA PENGGUNA (USER MANAGEMENT)
+   * --------------------------------------------------------------------------
+   * Mengambil semua data dari sheet 'users' untuk ditampilkan pada tabel Manajemen User.
+   * * @param {string} targetYear - Filter berdasarkan tahun daftar/PKL.
    */
   getAllUsers: function(targetYear) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const data = sheet.getDataRange().getDisplayValues();
-    const list = [];
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    var data = sheet.getDataRange().getDisplayValues();
+    var list = [];
     
-    const filterYear = (targetYear) ? String(targetYear).trim() : null;
+    var filterYear = (targetYear) ? String(targetYear).trim() : null;
 
-    for(let i = 1; i < data.length; i++) {
-      const userYear = data[i][7] ? String(data[i][7]).trim() : "";
+    for(var i = 1; i < data.length; i++) {
+      var userYear = data[i][7] ? String(data[i][7]).trim() : "";
 
       if (filterYear && userYear !== filterYear) continue;
 
@@ -124,54 +131,55 @@ const AdminService = {
       });
     }
     
+    // Urutkan list berdasarkan Role (ADMIN -> GURU -> SISWA secara abjad)
     list.sort(function(a, b) { return a.role.localeCompare(b.role); });
     return { success: true, list: list };
   },
 
   /**
-   * 3. SAVE USER (CREATE / UPDATE)
-   * Robust function to Add or Edit users.
-   * Automatically syncs changes to 'teachers' or 'students_map' sheets.
-   * * @param {Object} d - Form data { isEdit, username, password, nama, role, jurusan, tahun, nip_guru }
-   * @return {Object} { success: boolean, error?: string }
+   * --------------------------------------------------------------------------
+   * 3. SIMPAN USER (CREATE / UPDATE) - VERSI ROBUST
+   * --------------------------------------------------------------------------
+   * Menangani penambahan user baru atau pengeditan data user yang sudah ada
+   * melalui Form Modal Admin. Juga memastikan sinkronisasi data dengan sheet 
+   * 'teachers' dan 'students_map' agar sistem tetap terhubung.
+   * * @param {Object} d - Payload data (isEdit, username, nama, password, role, dll).
    */
   saveUser: function(d) {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sUsers = ss.getSheetByName('users');
-        let sMap = ss.getSheetByName('students_map');
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var sUsers = ss.getSheetByName('users');
+        var sMap = ss.getSheetByName('students_map');
         
-        // Ensure Users sheet exists
         if(!sUsers) return { success: false, error: "Database 'users' hilang!" };
-
         if(!d.username || !d.nama || !d.password) return { success: false, error: "Data wajib diisi." };
 
-        const rows = sUsers.getDataRange().getValues();
+        var rows = sUsers.getDataRange().getValues();
         
-        // --- A. EDIT MODE ---
+        // --- A. MODE EDIT (UPDATE) ---
         if(d.isEdit) {
-           let userFound = false;
-           for(let i = 1; i < rows.length; i++) {
+           var userFound = false;
+           for(var i = 1; i < rows.length; i++) {
               if(String(rows[i][0]) === String(d.username)) {
-                 // Update Main User Data
                  sUsers.getRange(i+1, 2).setValue(d.password);
                  sUsers.getRange(i+1, 4).setValue(d.nama);
                  sUsers.getRange(i+1, 3).setValue(d.role);
                  sUsers.getRange(i+1, 5).setValue(d.jurusan);
                  sUsers.getRange(i+1, 8).setValue(d.tahun);
                  
-                 // Sync Teacher Data
+                 // Jika user adalah GURU, update juga di sheet 'teachers'
                  if(d.role === 'GURU') {
                     updateTeacherSheet(ss, d.username, d.nama, 'UPDATE');
                  }
 
-                 // Sync Student Map
+                 // Jika user adalah SISWA, update relasinya dengan guru di 'students_map'
                  if(d.role === 'SISWA') {
+                    // Buat sheet jika tidak sengaja terhapus
                     if(!sMap) { sMap = ss.insertSheet('students_map'); sMap.appendRow(['nisn','nama','jurusan','nip_guru']); }
                     
-                    const mapRows = sMap.getDataRange().getValues();
-                    let foundMap = false;
-                    for(let j = 1; j < mapRows.length; j++) {
+                    var mapRows = sMap.getDataRange().getValues();
+                    var foundMap = false;
+                    for(var j = 1; j < mapRows.length; j++) {
                        if(String(mapRows[j][0]) === String(d.username)) {
                           sMap.getRange(j+1, 2).setValue(d.nama); 
                           sMap.getRange(j+1, 3).setValue(d.jurusan);
@@ -180,7 +188,7 @@ const AdminService = {
                           break;
                        }
                     }
-                    // Create map entry if missing
+                    // Jika siswa belum ada di map, tambahkan
                     if(!foundMap && d.nip_guru) sMap.appendRow(["'" + d.username, d.nama, d.jurusan, d.nip_guru]);
                  }
                  userFound = true;
@@ -191,20 +199,21 @@ const AdminService = {
            return { success: true };
         } 
         
-        // --- B. ADD NEW MODE ---
+        // --- B. MODE TAMBAH BARU (CREATE) ---
         else {
-           for(let i = 0; i < rows.length; i++) {
-              if(String(rows[i][0]) === String(d.username)) return { success: false, error: "Username/NISN sudah ada!" };
+           // Cek duplikasi username
+           for(var k = 0; k < rows.length; k++) {
+              if(String(rows[k][0]) === String(d.username)) return { success: false, error: "Username/NISN sudah ada!" };
            }
            
-           const tahunInput = d.tahun ? d.tahun : new Date().getFullYear();
+           var tahunInput = d.tahun ? d.tahun : new Date().getFullYear();
 
-           // 1. Save to Users
+           // 1. Simpan ke master sheet 'Users'
            sUsers.appendRow(["'" + d.username, d.password, d.role, d.nama, d.jurusan, '', '', tahunInput]);
            
-           // 2. Sync Logic based on Role
+           // 2. Simpan Sesuai Role untuk sinkronisasi relasi
            if(d.role === 'GURU') {
-              let sTeach = ss.getSheetByName('teachers');
+              var sTeach = ss.getSheetByName('teachers');
               if(!sTeach) { 
                   sTeach = ss.insertSheet('teachers'); 
                   sTeach.appendRow(['nip', 'nama_guru']); 
@@ -228,26 +237,30 @@ const AdminService = {
   },
 
   /**
-   * 4. DELETE USER
-   * Removes a user from the 'users' sheet and syncs deletion to 'teachers' sheet if applicable.
-   * Prevents deletion of the main 'admin' account.
-   * * @param {string} targetUsername - The username to delete
-   * @return {Object} { success: boolean, error?: string }
+   * --------------------------------------------------------------------------
+   * 4. HAPUS USER (DELETE)
+   * --------------------------------------------------------------------------
+   * Menghapus baris user secara permanen. Admin dilarang menghapus akun "admin" root.
+   * * @param {string} targetUsername - Username yang akan dihapus.
    */
   deleteUser: function(targetUsername) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('users');
-    const data = sheet.getDataRange().getDisplayValues();
-    const target = String(targetUsername).trim();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('users');
+    var data = sheet.getDataRange().getDisplayValues();
+    var target = String(targetUsername).trim();
 
-    for(let i = 1; i < data.length; i++) {
+    for(var i = 1; i < data.length; i++) {
       if(String(data[i][0]).trim() === target) {
-        const role = String(data[i][2]);
-        if(role === 'ADMIN' && target === 'admin') return { success: false, error: "Akun Admin Utama tidak boleh dihapus." };
+        var role = String(data[i][2]);
+        
+        // Mencegah super admin terhapus agar sistem tidak kehilangan akses admin
+        if(role === 'ADMIN' && target === 'admin') {
+           return { success: false, error: "Akun Admin Utama tidak boleh dihapus." };
+        }
         
         sheet.deleteRow(i + 1);
         
-        // Sync Delete for Teachers
+        // Hapus juga data sinkronisasinya jika dia adalah guru
         if(role === 'GURU') updateTeacherSheet(ss, target, null, 'DELETE');
         
         return { success: true };
@@ -257,47 +270,53 @@ const AdminService = {
   },
 
   /**
-   * 5. MONITORING LOGBOOK
-   * Retrieves logbook entries joined with student and teacher data.
-   * * @param {string} targetYear - Optional year filter
-   * @return {Object} { success: boolean, list: Array }
+   * --------------------------------------------------------------------------
+   * 5. MONITORING LOGBOOK (READ-ONLY)
+   * --------------------------------------------------------------------------
+   * Menarik seluruh data logbook dari sheet 'logbooks'.
+   * Fungsi ini menggunakan teknik Hash Map untuk memadukan data NISN Siswa 
+   * dengan nama Guru Pembimbingnya secara efisien.
+   * * @param {string} targetYear - (Opsional) Filter berdasarkan tahun entri.
    */
   getMonitoringData: function(targetYear) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sLogs = ss.getSheetByName('logbooks');
-    const sMap = ss.getSheetByName('students_map');
-    const sTeach = ss.getSheetByName('teachers');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sLogs = ss.getSheetByName('logbooks');
+    var sMap = ss.getSheetByName('students_map');
+    var sTeach = ss.getSheetByName('teachers');
     
     if(!sLogs) return { success: true, list: [] };
 
-    const logs = sLogs.getDataRange().getDisplayValues();
-    const maps = sMap ? sMap.getDataRange().getDisplayValues() : [];
-    const teachers = sTeach ? sTeach.getDataRange().getDisplayValues() : [];
-    const filterYear = (targetYear) ? String(targetYear).trim() : null;
+    var logs = sLogs.getDataRange().getDisplayValues();
+    var maps = sMap ? sMap.getDataRange().getDisplayValues() : [];
+    var teachers = sTeach ? sTeach.getDataRange().getDisplayValues() : [];
+    var filterYear = (targetYear) ? String(targetYear).trim() : null;
     
-    // Map Teacher NIP -> Name
-    const teacherNameMap = {};
-    for(let t = 1; t < teachers.length; t++) { teacherNameMap[teachers[t][0]] = teachers[t][1]; }
+    // 1. Buat Mapping (Kamus): NIP_GURU => NAMA_GURU
+    var teacherNameMap = {};
+    for(var t = 1; t < teachers.length; t++) { 
+       teacherNameMap[teachers[t][0]] = teachers[t][1]; 
+    }
 
-    // Map Student NISN -> Teacher Name
-    const studentMentorMap = {};
-    for(let m = 1; m < maps.length; m++) {
-      const nisn = maps[m][0];
-      const nipGuru = maps[m][3];
-      const namaGuru = teacherNameMap[nipGuru] || nipGuru || "-";
+    // 2. Buat Mapping (Kamus): NISN_SISWA => NAMA_GURU_PEMBIMBING
+    var studentMentorMap = {};
+    for(var m = 1; m < maps.length; m++) {
+      var nisn = maps[m][0];
+      var nipGuru = maps[m][3];
+      var namaGuru = teacherNameMap[nipGuru] || nipGuru || "-";
       studentMentorMap[nisn] = namaGuru;
     }
 
-    const list = [];
-    for(let i = 1; i < logs.length; i++) {
-      const row = logs[i];
+    // 3. Masukkan data Logbook dan pasangkan dengan nama pembimbing
+    var list = [];
+    for(var i = 1; i < logs.length; i++) {
+      var row = logs[i];
       
       if (filterYear) {
-         const d = new Date(row[2]); 
+         var d = new Date(row[2]); 
          if(isNaN(d.getTime()) || String(d.getFullYear()) !== filterYear) continue;
       }
 
-      const logNisn = row[1];
+      var logNisn = row[1];
       
       list.push({
         id: row[0],
@@ -312,23 +331,25 @@ const AdminService = {
       });
     }
     
+    // Reverse array agar logbook terbaru muncul paling atas di tabel admin
     return { success: true, list: list.reverse() };
   },
 
   /**
-   * 6. CHANGE ADMIN PASSWORD
-   * Updates the password for the current admin user.
-   * * @param {Object} user - Current user object
-   * @param {string} newPass - New password
-   * @return {Object} { success: boolean, error?: string }
+   * --------------------------------------------------------------------------
+   * 6. GANTI PASSWORD ADMIN
+   * --------------------------------------------------------------------------
+   * Mengubah password dari user (Admin) yang sedang aktif login.
+   * * @param {Object} user - User admin yang login
+   * @param {string} newPass - Password teks baru
    */
   changeMyPassword: function(user, newPass) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
-    const rows = sheet.getDataRange().getValues();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('users');
+    var rows = sheet.getDataRange().getValues();
     
-    for(let i = 1; i < rows.length; i++) {
+    for(var i = 1; i < rows.length; i++) {
        if(String(rows[i][0]) === String(user.username)) {
-          sheet.getRange(i+1, 2).setValue(newPass);
+          sheet.getRange(i + 1, 2).setValue(newPass);
           return { success: true };
        }
     }
@@ -337,31 +358,35 @@ const AdminService = {
 };
 
 /**
- * HELPER: Update Sheet Teachers (Sync)
- * Keeps the 'teachers' sheet in sync when users are modified in the main 'users' sheet.
- * * @param {Spreadsheet} ss - Active spreadsheet
- * @param {string} nip - Teacher NIP (Username)
- * @param {string} nama - Teacher Name
- * @param {string} action - 'UPDATE' or 'DELETE'
+ * =======================================================
+ * FUNGSI HELPER INTERNAL
+ * =======================================================
+ * Digunakan untuk menjaga konsistensi data antara sheet 'users' dan 'teachers'.
+ * Dipanggil secara otomatis ketika Admin mengedit nama guru atau menghapus akun guru.
+ * * @param {Spreadsheet} ss - Objek Spreadsheet aktif.
+ * @param {string} nip - ID Urut / Username guru.
+ * @param {string} nama - Nama baru (jika update).
+ * @param {string} action - 'UPDATE' atau 'DELETE'.
  */
 function updateTeacherSheet(ss, nip, nama, action) {
-  const sTeach = ss.getSheetByName('teachers');
+  var sTeach = ss.getSheetByName('teachers');
   if(!sTeach) return; 
-  const data = sTeach.getDataRange().getDisplayValues();
+  
+  var data = sTeach.getDataRange().getDisplayValues();
   
   if (action === 'UPDATE') {
-     for(let i = 1; i < data.length; i++) { 
-         if(String(data[i][0]) === String(nip)) { 
-             sTeach.getRange(i+1, 2).setValue(nama); 
-             break; 
-         } 
+     for(var i = 1; i < data.length; i++) { 
+        if(String(data[i][0]) === String(nip)) { 
+           sTeach.getRange(i + 1, 2).setValue(nama); 
+           break; 
+        } 
      }
   } else if (action === 'DELETE') {
-     for(let i = 1; i < data.length; i++) { 
-         if(String(data[i][0]) === String(nip)) { 
-             sTeach.deleteRow(i+1); 
-             break; 
-         } 
+     for(var j = 1; j < data.length; j++) { 
+        if(String(data[j][0]) === String(nip)) { 
+           sTeach.deleteRow(j + 1); 
+           break; 
+        } 
      }
   }
 }
